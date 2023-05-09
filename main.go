@@ -67,7 +67,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	// 將處理過程放在單獨的goroutine中
 	go func() {
 		// 調用Whisper API並獲取響應
-		whisperResp, err := callWhisperAPI("YJV4AX7FYNJKV6JNVWJJJVER4GGPUG8Y", audioReader)
+		whisperResp, err := callWhisperAPI("VSAC4PSGB3WXVGN7LRH3ANE5X1DQZVUQ", audioReader)
 		if err != nil {
 			resultChan <- fmt.Sprintf("Error calling Whisper API: %v", err)
 			return
@@ -192,8 +192,19 @@ func loggingMiddleware(next http.Handler) http.Handler {
 }
 
 func extractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
-	inputFilePath := "input.mp4"
-	outputFilePath := "output.mp3"
+	inputFileTemp, err := ioutil.TempFile("", "input-*.mp4")
+	if err != nil {
+		return nil, fmt.Errorf("Error creating temporary input file: %v", err)
+	}
+	inputFilePath := inputFileTemp.Name()
+	defer os.Remove(inputFilePath)
+
+	outputFileTemp, err := ioutil.TempFile("", "output-*.mp3")
+	if err != nil {
+		return nil, fmt.Errorf("Error creating temporary output file: %v", err)
+	}
+	outputFilePath := outputFileTemp.Name()
+	defer os.Remove(outputFilePath)
 
 	// 將上傳的文件保存到臨時文件中
 	inputFileBytes, err := ioutil.ReadAll(inputFile)
@@ -231,17 +242,6 @@ func extractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
 		return nil, fmt.Errorf("Error reading output file: %v", err)
 	}
 	log.Printf("Audio extracted successfully")
-
-	// 刪除臨時文件
-	err = os.Remove(inputFilePath)
-	if err != nil {
-		log.Printf("Error deleting input file: %v", err)
-	}
-
-	err = os.Remove(outputFilePath)
-	if err != nil {
-		log.Printf("Error deleting output file: %v", err)
-	}
 
 	return bytes.NewReader(outputFileBytes), nil
 }
