@@ -28,7 +28,7 @@ type WordTimestamp struct {
 	EndTime   float64 `json:"end_time"`
 }
 
-func callWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, error) {
+func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, error) {
 	url := "https://transcribe.whisperapi.com"
 	method := "POST"
 
