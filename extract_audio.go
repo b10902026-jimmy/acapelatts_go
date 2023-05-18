@@ -14,27 +14,25 @@ import (
 func ExtractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
 	inputFileTemp, err := ioutil.TempFile("", "input-*.mp4")
 	if err != nil {
-		return nil, fmt.Errorf("Error creating temporary input file: %v", err)
+		return nil, fmt.Errorf("error creating temporary input file: %v", err)
 	}
 	inputFilePath := inputFileTemp.Name()
 	defer os.Remove(inputFilePath)
 
 	outputFileTemp, err := ioutil.TempFile("", "output-*.mp3")
 	if err != nil {
-		return nil, fmt.Errorf("Error creating temporary output file: %v", err)
+		os.Remove(inputFilePath) // 刪除輸入暫存檔案
+		return nil, fmt.Errorf("error creating temporary output file: %v", err)
 	}
 	outputFilePath := outputFileTemp.Name()
 	defer os.Remove(outputFilePath)
 
 	// 將上傳的文件保存到臨時文件中
-	inputFileBytes, err := ioutil.ReadAll(inputFile)
+	_, err = io.Copy(inputFileTemp, inputFile) // 直接將 inputFile 的資料流寫入到你的臨時檔案
 	if err != nil {
-		return nil, fmt.Errorf("Error reading input file: %v", err)
-	}
-
-	err = ioutil.WriteFile(inputFilePath, inputFileBytes, 0644)
-	if err != nil {
-		return nil, fmt.Errorf("Error writing input file to disk: %v", err)
+		os.Remove(inputFilePath)  // 刪除輸入暫存檔案
+		os.Remove(outputFilePath) // 刪除輸出暫存檔案
+		return nil, fmt.Errorf("error writing input file to disk: %v", err)
 	}
 
 	// 初始化轉碼器
@@ -43,7 +41,9 @@ func ExtractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
 	// 配置轉碼器
 	err = trans.Initialize(inputFilePath, outputFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("Error initializing transcoder: %v", err)
+		os.Remove(inputFilePath)  // 刪除輸入暫存檔案
+		os.Remove(outputFilePath) // 刪除輸出暫存檔案
+		return nil, fmt.Errorf("error initializing transcoder: %v", err)
 	}
 
 	// 開始轉碼
@@ -52,16 +52,22 @@ func ExtractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
 	// 等待轉碼完成
 	err = <-done
 	if err != nil {
-		return nil, fmt.Errorf("Error transcoding: %v", err)
+		os.Remove(inputFilePath)  // 刪除輸入暫存檔案
+		os.Remove(outputFilePath) // 刪除輸出暫存檔案
+		return nil, fmt.Errorf("error transcoding: %v", err)
 	}
 
 	// 讀取輸出音訊文件
-	outputFileBytes, err := ioutil.ReadFile(outputFilePath)
+	outputFileBytes, err := os.ReadFile(outputFilePath)
 	if err != nil {
-		log.Printf("Error reading output file: %v", err)
-		return nil, fmt.Errorf("Error reading output file: %v", err)
+		os.Remove(inputFilePath)  // 刪除輸入暫存檔案
+		os.Remove(outputFilePath) // 刪除輸出暫存檔案
+		return nil, fmt.Errorf("error reading output file: %v", err)
 	}
 	log.Printf("Audio extracted successfully")
+
+	os.Remove(inputFilePath)
+	os.Remove(outputFilePath)
 
 	return bytes.NewReader(outputFileBytes), nil
 }

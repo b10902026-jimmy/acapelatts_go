@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -16,7 +17,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	file, _, err := r.FormFile("video_file")
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error getting file: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("error getting file: %v", err), http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
@@ -24,21 +25,29 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 	// 提取音訊
 	audioReader, err := ExtractAudioFromVideo(file)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error extracting audio: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("error extracting audio: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 100*time.Second)
 	defer cancel()
 
 	resultChan := make(chan string, 1)
 
 	// 將處理過程放在單獨的goroutine中
 	go func() {
-		// 調用Whisper API並獲取響應
-		whisperResp, err := CallWhisperAPI("VSAC4PSGB3WXVGN7LRH3ANE5X1DQZVUQ", audioReader)
+
+		// 從系統環境變數中獲取API key
+		apiKey := os.Getenv("WHISPER_API_KEY")
+		if apiKey == "" {
+			resultChan <- "WHISPER_API_KEY environment variable not set"
+			return
+		}
+
+		// 使用從環境變數獲取的API key
+		whisperResp, err := CallWhisperAPI(apiKey, audioReader)
 		if err != nil {
-			resultChan <- fmt.Sprintf("Error calling Whisper API: %v", err)
+			resultChan <- fmt.Sprintf("error calling Whisper API: %v", err)
 			return
 		}
 
@@ -61,7 +70,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			"word_timestamps": wordTimestamps,
 		})
 		if err != nil {
-			resultChan <- fmt.Sprintf("Error marshaling JSON: %v", err)
+			resultChan <- fmt.Sprintf("error marshaling JSON: %v", err)
 			return
 		}
 
@@ -76,7 +85,7 @@ func handleUpload(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprintf(w, res)
+		fmt.Fprint(w, res)
 	case <-ctx.Done():
 		http.Error(w, "Request timeout", http.StatusRequestTimeout)
 		return
