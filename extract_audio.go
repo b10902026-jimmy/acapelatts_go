@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 
@@ -12,14 +11,14 @@ import (
 )
 
 func ExtractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
-	inputFileTemp, err := ioutil.TempFile("", "input-*.mp4")
+	inputFileTemp, err := os.CreateTemp("", "input-*.mp4")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temporary input file: %v", err)
 	}
 	inputFilePath := inputFileTemp.Name()
 	defer os.Remove(inputFilePath)
 
-	outputFileTemp, err := ioutil.TempFile("", "output-*.mp3")
+	outputFileTemp, err := os.CreateTemp("", "output-*.mp3")
 	if err != nil {
 		os.Remove(inputFilePath) // 刪除輸入暫存檔案
 		return nil, fmt.Errorf("error creating temporary output file: %v", err)
