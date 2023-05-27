@@ -1,4 +1,4 @@
-package main
+package audio_processing
 
 import (
 	"bytes"

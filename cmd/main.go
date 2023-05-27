@@ -3,7 +3,8 @@ package main
 import (
 	"fmt"
 	"net/http"
-	"videoUploadAndProcessing/upload"
+	"videoUploadAndProcessing/pkg/log"
+	"videoUploadAndProcessing/pkg/upload"
 )
 
 func main() {
@@ -25,7 +26,7 @@ func main() {
 	})
 
 	// 使用LoggingMiddleware包裝您的路由
-	http.Handle("/", LoggingMiddleware(mux))
+	http.Handle("/", log.LoggingMiddleware(mux))
 
 	port := "3000"
 	fmt.Printf("Starting server on port %s\n", port)
