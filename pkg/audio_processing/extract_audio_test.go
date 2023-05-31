@@ -2,6 +2,7 @@ package audio_processing
 
 import (
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"testing"
@@ -11,6 +12,7 @@ func TestExtractAudioFromVideo(t *testing.T) {
 	// 打開測試影片
 	inputFile, err := os.Open("./test_files/test_video.mp4")
 	if err != nil {
+		log.Println(err)
 		t.Fatalf("failed to open video file: %v", err)
 	}
 	defer inputFile.Close()

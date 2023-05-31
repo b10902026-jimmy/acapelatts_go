@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"videoUploadAndProcessing/pkg/audio_processing"
 )
 
@@ -45,12 +46,14 @@ func ProcessJob(job Job) error {
 	// 提取音訊
 	audioReader, err := audio_processing.ExtractAudioFromVideo(job.File)
 	if err != nil {
+		log.Println(err)
 		return fmt.Errorf("error extracting audio: %v", err)
 	}
 
 	// 使用從環境變數獲取的API key
 	whisperResp, err := audio_processing.CallWhisperAPI(job.APIKey, audioReader)
 	if err != nil {
+		log.Println(err)
 		return fmt.Errorf("error calling Whisper API: %v", err)
 	}
 
@@ -73,10 +76,35 @@ func ProcessJob(job Job) error {
 		"word_timestamps": wordTimestamps,
 	})
 	if err != nil {
+		log.Println(err)
 		return fmt.Errorf("error marshaling JSON: %v", err)
 	}
 
 	log.Println(string(responseJSON))
+	// 為 Acapela API 呼叫製作一個文本與語音變數
+	text := whisperResp.Text
+	voice := "Ryan22k_NT" // 這裡請用你想用的語音
+
+	// 呼叫 Acapela API 並取得音訊
+	acapelaResp, err := audio_processing.CallAcapelaAPI(text, voice)
+	if err != nil {
+		return fmt.Errorf("error calling Acapela API: %v", err)
+	}
+
+	// 檢查 Acapela返回格式是否為mp3
+	contentType := http.DetectContentType(acapelaResp.Content)
+	if contentType != "audio/mpeg" {
+		fmt.Println("The content is not in MP3 format")
+		return fmt.Errorf("error: the content is not in MP3 format")
+	} else {
+		fmt.Println("The content of Acapela's response is in MP3 format")
+	}
+
+	// 保存音频文件
+	err = audio_processing.SaveAudioToFile(acapelaResp.Content, "acapela_response_test.mp3")
+	if err != nil {
+		return fmt.Errorf("error saving audio to file: %v", err)
+	}
 
 	return nil
 }
