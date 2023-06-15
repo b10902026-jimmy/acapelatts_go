@@ -29,7 +29,7 @@ func (w Worker) Start() {
 			log.Printf("Worker %d processing job", w.ID)
 			err := ProcessJob(job)
 			if err != nil {
-				if job.Retries < 5 { // 如果尚未達到最大重試次數
+				if job.Retries < 2 { // 如果尚未達到最大重試次數
 					job.Retries++
 					w.JobQueue <- job // 將工作重新放入佇列
 				} else {
