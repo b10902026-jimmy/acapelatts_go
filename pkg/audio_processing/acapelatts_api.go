@@ -108,3 +108,29 @@ func CallAcapelaAPI(text string, voice string) (AcapelaResponse, error) {
 
 	return AcapelaResponse{Content: content}, nil
 }
+
+func ConvertTextToSpeechUsingAcapela(text string, voice string, segmentIndex int) (string, error) {
+	// 使用提供的文字和語音調用Acapela API
+	acapelaResp, err := CallAcapelaAPI(text, voice)
+	if err != nil {
+		log.Printf("Failed to convert text to speech using Acapela API: %v", err)
+		return "", err
+	}
+
+	// 檢查返回的內容是否為mp3格式
+	contentType := http.DetectContentType(acapelaResp.Content)
+	if contentType != "audio/mpeg" {
+		log.Println("The content is not in MP3 format")
+		return "", fmt.Errorf("error: the content is not in MP3 format")
+	}
+
+	// 將返回的內容保存為mp3文件，使用segmentIndex生成唯一的檔名
+	tempFilePath := fmt.Sprintf("acapela_audio_segment_%d.mp3", segmentIndex)
+	err = SaveAudioToFile(acapelaResp.Content, tempFilePath)
+	if err != nil {
+		log.Printf("Failed to save audio to file: %v", err)
+		return "", err
+	}
+
+	return tempFilePath, nil
+}

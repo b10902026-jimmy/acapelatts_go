@@ -28,7 +28,7 @@ func main() {
 	// 使用LoggingMiddleware包裝您的路由
 	http.Handle("/", log.LoggingMiddleware(mux))
 
-	port := "3000"
+	port := "30016"
 	fmt.Printf("Starting server on port %s\n", port)
 	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {

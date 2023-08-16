@@ -1,19 +1,24 @@
 package upload
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"log"
-	"net/http"
+	"os"
+	"os/exec"
+	"path"
+	"time"
 	"videoUploadAndProcessing/pkg/audio_processing"
 )
 
 const NumWorkers = 5 // 設定工作人員的數量
 
+const InitialBackoffDuration = 500 * time.Millisecond // 初始回退時間
+const MaxBackoffDuration = 16 * time.Second           // 最大回退時間
+
 type Job struct {
 	File     io.ReadCloser
-	FileName string
+	FilePath string
 	APIKey   string
 	Retries  int
 }
@@ -31,7 +36,10 @@ func (w Worker) Start() {
 			if err != nil {
 				if job.Retries < 2 { // 如果尚未達到最大重試次數
 					job.Retries++
-					w.JobQueue <- job // 將工作重新放入佇列
+					backoffDuration := getBackoffDuration(job.Retries)
+					log.Printf("Job failed, retrying after %v", backoffDuration)
+					time.Sleep(backoffDuration) // Apply backoff delay
+					w.JobQueue <- job           // 將工作重新放入佇列
 				} else {
 					log.Printf("Job failed after %d retries", job.Retries)
 				}
@@ -40,71 +48,117 @@ func (w Worker) Start() {
 	}()
 }
 
+// Compute the backoff duration based on retry count.
+func getBackoffDuration(retryCount int) time.Duration {
+	backoff := InitialBackoffDuration * time.Duration(1<<retryCount)
+	if backoff > MaxBackoffDuration {
+		return MaxBackoffDuration
+	}
+	return backoff
+}
+
 func ProcessJob(job Job) error {
 
 	defer job.File.Close()
-	// 提取音訊
-	audioReader, err := audio_processing.ExtractAudioFromVideo(job.File)
+	// 使用os.Open重新打開文件以供讀取
+	file, err := os.Open(job.FilePath)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Failed to open the file: %v", err)
+		job.File.Close()
+		return fmt.Errorf("failed to open the file: %v", err)
+	}
+	defer file.Close()
+
+	// 使用新打開的file讀取器提取音訊
+	audioReader, err := audio_processing.ExtractAudioFromVideo(file)
+	if err != nil {
+		log.Printf("Error extracting audio: %v", err)
+		job.File.Close()
 		return fmt.Errorf("error extracting audio: %v", err)
 	}
 
 	// 使用從環境變數獲取的API key
 	whisperResp, err := audio_processing.CallWhisperAPI(job.APIKey, audioReader)
 	if err != nil {
-		log.Println(err)
+		log.Printf("Error calling Whisper API: %v", err)
 		return fmt.Errorf("error calling Whisper API: %v", err)
 	}
 
-	// 將單詞時間戳記以JSON格式返回給前端
-	wordTimestamps := []audio_processing.WordTimestamp{}
+	sentenceTimestamps := []audio_processing.SentenceTimestamp{}
 	for _, segment := range whisperResp.Segments {
-		for _, wholeWordTimestamp := range segment.WholeWordTimestamps {
-			wordTimestamp := audio_processing.WordTimestamp{
-				Word:      wholeWordTimestamp.Word,
-				StartTime: wholeWordTimestamp.Start,
-				EndTime:   wholeWordTimestamp.End,
-			}
+		sentenceTimestamp := audio_processing.SentenceTimestamp{
+			Sentence:  segment.Text,
+			StartTime: segment.Start,
+			EndTime:   segment.End,
+		}
+		sentenceTimestamps = append(sentenceTimestamps, sentenceTimestamp)
+	}
 
-			wordTimestamps = append(wordTimestamps, wordTimestamp)
+	videoDuration, err := audio_processing.GetVideoDuration(job.FilePath)
+	if err != nil {
+		log.Printf("Failed to get video duration: %v", err)
+		return fmt.Errorf("failed to get video duration: %v", err)
+	}
+
+	videoSegmentPaths, err := audio_processing.SplitVideoIntoSegments(job.FilePath, sentenceTimestamps, videoDuration)
+	if err != nil {
+		log.Printf("Failed to split video into segments: %v", err)
+		return fmt.Errorf("failed to split video into segments: %v", err)
+	}
+
+	var mergedSegments []string
+
+	for i, segment := range videoSegmentPaths {
+		audioSegment, err := audio_processing.ConvertTextToSpeechUsingAcapela(whisperResp.Segments[i].Text, "Ryan22k_NT", i)
+		if err != nil {
+			log.Printf("Failed to convert text to speech for segment: %v", err)
+			return fmt.Errorf("failed to convert text to speech for segment %d: %v", i, err)
+		}
+
+		mergedSegment := fmt.Sprintf("merged_segment%d.mp4", i)
+		err = audio_processing.MergeVideoAndAudio(segment, audioSegment, mergedSegment)
+		if err != nil {
+			log.Printf("Failed to  merge video and audio for segment: %v", err)
+			return fmt.Errorf("failed to merge video and audio for segment %d: %v", i, err)
+		}
+		mergedSegments = append(mergedSegments, mergedSegment)
+	}
+
+	listFile := "filelist.txt"
+	f, err := os.Create(listFile)
+	if err != nil {
+		log.Printf("Failed to create list file: %v", err)
+		return fmt.Errorf("failed to create list file: %v", err)
+	}
+	defer f.Close()
+	for _, segmentPath := range mergedSegments {
+		_, err = f.WriteString(fmt.Sprintf("file '%s'\n", segmentPath))
+		if err != nil {
+			log.Printf("Failed to write segment path to list file: %v", err)
+			return fmt.Errorf("failed to write segment path to list file: %v", err)
 		}
 	}
 
-	responseJSON, err := json.Marshal(map[string]interface{}{
-		"text":            whisperResp.Text,
-		"word_timestamps": wordTimestamps,
-	})
+	finalVideoDir := "../pkg/audio_processing/test_files/final_video"
+	outputVideo := path.Join(finalVideoDir, "final_output.mp4")
+	cmd := exec.Command("ffmpeg", "-f", "concat", "-safe", "0", "-i", listFile, "-c", "copy", outputVideo)
+	err = cmd.Run()
 	if err != nil {
-		log.Println(err)
-		return fmt.Errorf("error marshaling JSON: %v", err)
+		return fmt.Errorf("failed to merge video segments: %v", err)
 	}
 
-	log.Println(string(responseJSON))
-	// 為 Acapela API 呼叫製作一個文本與語音變數
-	text := whisperResp.Text
-	voice := "Ryan22k_NT" // 這裡請用你想用的語音
-
-	// 呼叫 Acapela API 並取得音訊
-	acapelaResp, err := audio_processing.CallAcapelaAPI(text, voice)
+	err = os.Remove(listFile)
 	if err != nil {
-		return fmt.Errorf("error calling Acapela API: %v", err)
+		log.Printf("warning: failed to remove list file: %v", err)
 	}
 
-	// 檢查 Acapela返回格式是否為mp3
-	contentType := http.DetectContentType(acapelaResp.Content)
-	if contentType != "audio/mpeg" {
-		fmt.Println("The content is not in MP3 format")
-		return fmt.Errorf("error: the content is not in MP3 format")
-	} else {
-		fmt.Println("The content of Acapela's response is in MP3 format")
+	for _, segmentPath := range mergedSegments {
+		err = os.Remove(segmentPath)
+		if err != nil {
+			log.Printf("warning: failed to remove segment: %v", err)
+		}
 	}
 
-	// 保存音频文件
-	err = audio_processing.SaveAudioToFile(acapelaResp.Content, "acapela_response_test.mp3")
-	if err != nil {
-		return fmt.Errorf("error saving audio to file: %v", err)
-	}
-
+	job.File.Close()
 	return nil
 }
