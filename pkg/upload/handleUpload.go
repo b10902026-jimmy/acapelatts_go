@@ -22,7 +22,14 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 	}
 
 	uniqueFileName := fmt.Sprintf("video_%d.mp4", time.Now().UnixNano())
-	tempFilePath := filepath.Join("..", "pkg", "tmp", "video", uniqueFileName)
+	tempFilePath := filepath.Join("..", "pkg", "audio_processing", "tmp", "video", uniqueFileName)
+
+	// Ensure the directory exists
+	dir := filepath.Dir(tempFilePath)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		http.Error(w, fmt.Sprintf("error creating directories: %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	tempFile, err := os.Create(tempFilePath)
 	if err != nil {

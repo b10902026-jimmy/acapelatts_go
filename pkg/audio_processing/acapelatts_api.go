@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path"
 )
 
 type LoginResponse struct {
@@ -125,8 +126,9 @@ func ConvertTextToSpeechUsingAcapela(text string, voice string, segmentIndex int
 	}
 
 	// 將返回的內容保存為mp3文件，使用segmentIndex生成唯一的檔名
-	tempFilePath := fmt.Sprintf("acapela_audio_segment_%d.mp3", segmentIndex)
-	err = SaveAudioToFile(acapelaResp.Content, tempFilePath)
+	tempFileName := fmt.Sprintf("acapela_audio_segment_%d.mp3", segmentIndex)
+	tempFilePath := path.Join("../pkg/audio_processing/tmp/audio", tempFileName)
+	err = SaveAudioToFile(acapelaResp.Content, tempFileName) // 注意这里只需要传文件名
 	if err != nil {
 		log.Printf("Failed to save audio to file: %v", err)
 		return "", err

@@ -100,28 +100,25 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to get video duration: %v", err)
 	}
 
-	videoSegmentPaths, err := audio_processing.SplitVideoIntoSegments(job.FilePath, sentenceTimestamps, videoDuration)
+	videoSegmentPaths, voiceSegmentPaths, err := audio_processing.SplitVideoIntoSegments(job.FilePath, sentenceTimestamps, videoDuration)
 	if err != nil {
 		log.Printf("Failed to split video into segments: %v", err)
 		return fmt.Errorf("failed to split video into segments: %v", err)
 	}
 
-	var mergedSegments []string
-
-	for i, segment := range videoSegmentPaths {
+	for i, segment := range voiceSegmentPaths {
 		audioSegment, err := audio_processing.ConvertTextToSpeechUsingAcapela(whisperResp.Segments[i].Text, "Ryan22k_NT", i)
 		if err != nil {
 			log.Printf("Failed to convert text to speech for segment: %v", err)
 			return fmt.Errorf("failed to convert text to speech for segment %d: %v", i, err)
 		}
 
-		mergedSegment := fmt.Sprintf("merged_segment%d.mp4", i)
-		err = audio_processing.MergeVideoAndAudio(segment, audioSegment, mergedSegment)
+		// Merge the voice-over with the video segment and overwrite the original segment
+		err = audio_processing.MergeVideoAndAudio(segment, audioSegment, segment) // Overwrite the segment
 		if err != nil {
-			log.Printf("Failed to  merge video and audio for segment: %v", err)
+			log.Printf("Failed to merge video and audio for segment: %v", err)
 			return fmt.Errorf("failed to merge video and audio for segment %d: %v", i, err)
 		}
-		mergedSegments = append(mergedSegments, mergedSegment)
 	}
 
 	listFile := "filelist.txt"
@@ -131,7 +128,8 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to create list file: %v", err)
 	}
 	defer f.Close()
-	for _, segmentPath := range mergedSegments {
+
+	for _, segmentPath := range videoSegmentPaths {
 		_, err = f.WriteString(fmt.Sprintf("file '%s'\n", segmentPath))
 		if err != nil {
 			log.Printf("Failed to write segment path to list file: %v", err)
@@ -139,7 +137,7 @@ func ProcessJob(job Job) error {
 		}
 	}
 
-	finalVideoDir := "../pkg/audio_processing/test_files/final_video"
+	finalVideoDir := "../pkg/audio_processing/tmp/final_video"
 	outputVideo := path.Join(finalVideoDir, "final_output.mp4")
 	cmd := exec.Command("ffmpeg", "-f", "concat", "-safe", "0", "-i", listFile, "-c", "copy", outputVideo)
 	err = cmd.Run()
@@ -150,13 +148,6 @@ func ProcessJob(job Job) error {
 	err = os.Remove(listFile)
 	if err != nil {
 		log.Printf("warning: failed to remove list file: %v", err)
-	}
-
-	for _, segmentPath := range mergedSegments {
-		err = os.Remove(segmentPath)
-		if err != nil {
-			log.Printf("warning: failed to remove segment: %v", err)
-		}
 	}
 
 	job.File.Close()
