@@ -1,4 +1,4 @@
-package audio_processing
+package whisper_api
 
 import (
 	"bytes"

@@ -1,4 +1,4 @@
-package audio_processing
+package acapela_api
 
 import (
 	"fmt"
@@ -7,7 +7,7 @@ import (
 	"path"
 )
 
-func SaveAudioToFile(content []byte, filename string) error {
+func saveAudioToFile(content []byte, filename string) error {
 	// 拼接檔案路径
 	dirPath := "../pkg/audio_processing/tmp/audio"
 	filePath := path.Join(dirPath, filename)
@@ -35,8 +35,6 @@ func SaveAudioToFile(content []byte, filename string) error {
 		log.Printf("error writing to file: %v", err)
 		return fmt.Errorf("error writing to file: %v", err)
 	}
-
-	log.Printf("Successfully saved the mp3 file from Acapela to the local directory 'test_files'.")
 
 	return nil
 }
