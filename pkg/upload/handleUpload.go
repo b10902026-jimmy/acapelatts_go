@@ -51,7 +51,16 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		return
 	}
 
-	worker.JobQueue <- Job{File: tempFile, FilePath: tempFilePath, APIKey: apiKey}
+	// 創建一個通道來接收工作完成的通知
+	done := make(chan bool)
+
+	worker.JobQueue <- Job{File: tempFile, FilePath: tempFilePath, APIKey: apiKey, Done: done}
+
+	// 啟動一個協程來等待工作完成並執行清理操作
+	go func() {
+		<-done                  // 等待工作完成的通知
+		os.Remove(tempFilePath) // 刪除原始影片文件
+	}()
 
 	w.WriteHeader(http.StatusOK)
 }

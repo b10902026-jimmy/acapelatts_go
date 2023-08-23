@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"path"
 )
 
@@ -31,7 +32,7 @@ func MergeVideoAndAudioBySegments(videoPath string, audioPath string, outputPath
 
 	// If audio is shorter than video, add silent frames
 	if audioDuration < videoDuration {
-		err = ExecFFMPEG("-y", "-i", audioPath, "-af", fmt.Sprintf("apad=pad_dur=%f", videoDuration), "-y", tempAudioPath)
+		err = ExecFFMPEG("-y", "-i", audioPath, "-af", fmt.Sprintf("apad=whole_dur=%f", videoDuration), "-y", tempAudioPath)
 		if err != nil {
 			return fmt.Errorf("error padding audio with silence: %v", err)
 		}
@@ -63,52 +64,40 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 		log.Printf("Failed to create list file: %v", err)
 		return "", fmt.Errorf("failed to create list file: %v", err)
 	}
-
 	defer f.Close()
 
-	for _, segmentPath := range segmentPaths {
-		_, err = f.WriteString(fmt.Sprintf("file '%s'\n", segmentPath))
+	tempDir := "converted_segments"
+	err = os.MkdirAll(tempDir, 0755)
+	if err != nil {
+		log.Printf("Failed to create temporary directory: %v", err)
+		return "", fmt.Errorf("failed to create temporary directory: %v", err)
+	}
+	defer os.RemoveAll(tempDir) // Remove the directory after merging
+
+	for index, segmentPath := range segmentPaths {
+		// Convert the audio to 44100 Hz and stereo channel
+		convertedSegmentPath := path.Join(tempDir, fmt.Sprintf("segment%d_converted.mp4", index))
+		err := ExecFFMPEG("-y", "-i", segmentPath, "-ar", "44100", "-ac", "2", convertedSegmentPath)
+		if err != nil {
+			log.Printf("Failed to convert segment: %s, error: %v", segmentPath, err)
+			return "", fmt.Errorf("failed to convert segment: %s, error: %v", segmentPath, err)
+		}
+
+		// Print detailed information of each converted segment
+		cmd := exec.Command("ffprobe", "-hide_banner", "-i", convertedSegmentPath)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		err = cmd.Run()
+		if err != nil {
+			log.Printf("Failed to print details for converted segment: %s, error: %v", convertedSegmentPath, err)
+		}
+
+		_, err = f.WriteString(fmt.Sprintf("file '%s'\n", convertedSegmentPath))
 		if err != nil {
 			log.Printf("Failed to write segment path to list file: %v", err)
 			return "", fmt.Errorf("failed to write segment path to list file: %v", err)
 		}
-		// 打印每個片段的路徑
-		log.Printf("Segment path: %s", segmentPath)
 	}
-
-	// Get the codecs of the first segment as the reference
-	refVideoCodec, refAudioCodec, err := GetCodecs(segmentPaths[0])
-	if err != nil {
-		return "", err
-	}
-
-	// Check that all segments have the same codecs and re-encode if necessary
-	for i, segmentPath := range segmentPaths {
-		videoCodec, audioCodec, err := GetCodecs(segmentPath)
-		if err != nil {
-			return "", err
-		}
-
-		if videoCodec != refVideoCodec || audioCodec != refAudioCodec {
-			log.Printf("Re-encoding segment %s to match video codec %s and audio codec %s", segmentPath, refVideoCodec, refAudioCodec)
-
-			reencodedSegmentPath := fmt.Sprintf("reencoded_segment%d.mp4", i)
-			err := ExecFFMPEG("-y", "-i", segmentPath, "-c:v", refVideoCodec, "-c:a", refAudioCodec, reencodedSegmentPath)
-			if err != nil {
-				return "", fmt.Errorf("error re-encoding segment %s: %v", segmentPath, err)
-			}
-
-			// Replace the original segment path with the re-encoded segment path
-			segmentPaths[i] = reencodedSegmentPath
-		}
-	}
-
-	fileContent, err := os.ReadFile(listFile)
-	if err != nil {
-		log.Printf("Failed to read list file: %v", err)
-		return "", fmt.Errorf("failed to read list file: %v", err)
-	}
-	log.Printf("Content of filelist.txt:\n%s", fileContent)
 
 	finalVideoDir := "../pkg/audio_processing/test_files"
 
