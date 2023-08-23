@@ -23,6 +23,7 @@ type Job struct {
 	FilePath string
 	APIKey   string
 	Retries  int
+	Done     chan bool // 用來通知工作完成
 }
 
 type Worker struct {
@@ -189,5 +190,8 @@ func ProcessJob(job Job) error {
 	log.Println("Video processing is complete, and the audio has been replaced with Acapela's TTS output.") // 添加信息
 
 	job.File.Close()
+
+	// 工作完成，發送通知
+	job.Done <- true
 	return nil
 }
