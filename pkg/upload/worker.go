@@ -104,6 +104,12 @@ func ProcessJob(job Job) error {
 		sentenceTimestamps = append(sentenceTimestamps, sentenceTimestamp)
 	}
 
+	err = whisper_api.CreateSRTFile(whisperResp)
+	if err != nil {
+		log.Printf("Error creating SRT file: %v", err)
+		return fmt.Errorf("error creating SRT file: %v", err)
+	}
+
 	videoDuration, err := audio_processing.GetVideoDuration(job.FilePath)
 	if err != nil {
 		log.Printf("Failed to get video duration: %v", err)
