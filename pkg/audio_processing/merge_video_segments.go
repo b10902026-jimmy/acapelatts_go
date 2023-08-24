@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 )
 
@@ -83,14 +82,14 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 			return "", fmt.Errorf("failed to convert segment: %s, error: %v", segmentPath, err)
 		}
 
-		// Print detailed information of each converted segment
+		/*// Print detailed information of each converted segment
 		cmd := exec.Command("ffprobe", "-hide_banner", "-i", convertedSegmentPath)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		err = cmd.Run()
 		if err != nil {
 			log.Printf("Failed to print details for converted segment: %s, error: %v", convertedSegmentPath, err)
-		}
+		}*/
 
 		_, err = f.WriteString(fmt.Sprintf("file '%s'\n", convertedSegmentPath))
 		if err != nil {

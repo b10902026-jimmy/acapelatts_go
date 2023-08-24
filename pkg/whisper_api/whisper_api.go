@@ -11,11 +11,22 @@ import (
 
 // 定義Whisper API的響應結構
 type WhisperResponse struct {
+	Text     string `json:"text"`
+	Language string `json:"language"`
 	Segments []struct {
-		Start float64 `json:"start"`
-		End   float64 `json:"end"`
-		Text  string  `json:"text"` // 添加text字段以保存每個segment的文本
+		Start               float64         `json:"start"`
+		End                 float64         `json:"end"`
+		Text                string          `json:"text"`
+		WholeWordTimestamps []WordTimestamp `json:"whole_word_timestamps"`
 	} `json:"segments"`
+}
+
+// 定義單個單詞的時間戳結構
+type WordTimestamp struct {
+	Word        string  `json:"word"`
+	StartTime   float64 `json:"start"`
+	EndTime     float64 `json:"end"`
+	Probability float64 `json:"probability"`
 }
 
 type SentenceTimestamp struct {
@@ -83,6 +94,12 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, err
 	}
 
 	log.Printf("Whisper API response unmarshaled successfully")
+
+	// 迭代whisperResp.Segments並打印每個段落的Text字段
+	for i, segment := range whisperResp.Segments {
+		log.Printf("Segment %d Text: %s", i, segment.Text)
+	}
+
 	//log.Printf("Whisper API response text: %s", whisperResp.Text)
 
 	return &whisperResp, nil
