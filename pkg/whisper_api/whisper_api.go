@@ -94,12 +94,12 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, err
 	}
 
 	log.Printf("Whisper API response unmarshaled successfully")
-
-	// 迭代whisperResp.Segments並打印每個段落的Text字段
-	for i, segment := range whisperResp.Segments {
-		log.Printf("Segment %d Text: %s", i, segment.Text)
-	}
-
+	/*
+		// 迭代whisperResp.Segments並打印每個段落的Text字段
+		for i, segment := range whisperResp.Segments {
+			log.Printf("Segment %d Text: %s", i, segment.Text)
+		}
+	*/
 	//log.Printf("Whisper API response text: %s", whisperResp.Text)
 
 	return &whisperResp, nil

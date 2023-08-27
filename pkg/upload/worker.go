@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 	"videoUploadAndProcessing/pkg/acapela_api"
 	"videoUploadAndProcessing/pkg/audio_processing"
@@ -31,6 +31,20 @@ type Worker struct {
 	JobQueue chan Job
 }
 
+type SegmentJob struct {
+	Text       string
+	VideoPath  string
+	Suffix     string
+	SegmentIdx int
+}
+
+type SegmentWorker struct {
+	ID          int
+	JobQueue    chan SegmentJob
+	SegmentPath *string
+	SegmentIdx  int
+}
+
 func (w Worker) Start() {
 	go func() {
 		for job := range w.JobQueue {
@@ -49,6 +63,57 @@ func (w Worker) Start() {
 			}
 		}
 	}()
+}
+
+func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
+	go func() {
+		for job := range w.JobQueue {
+			log.Printf("SegmentWorker %d: Starting processing for segment %d", w.ID, job.SegmentIdx)
+			// Convert text to speech
+			audioSegment, err := acapela_api.ConvertTextToSpeechUsingAcapela(job.Text, job.Suffix, job.SegmentIdx)
+			if err != nil {
+				errors <- fmt.Errorf("SegmentWorker %d: failed to convert text to speech for segment %d: %v", w.ID, job.SegmentIdx, err)
+				continue
+			}
+
+			log.Printf("SegmentWorker %d: Converted text to speech for segment %d", w.ID, job.SegmentIdx)
+			// Merge the voice-over with the video segment and overwrite the original segment
+			var mergedSegment string
+			if strings.HasSuffix(job.VideoPath, ".mp4") {
+				mergedSegment = strings.TrimSuffix(job.VideoPath, ".mp4") + "_merged.mp4"
+			} else {
+				mergedSegment = job.VideoPath + "_merged.mp4"
+			}
+
+			err = audio_processing.MergeVideoAndAudioBySegments(job.VideoPath, audioSegment, mergedSegment, job.SegmentIdx)
+			if err != nil {
+				errors <- fmt.Errorf("SegmentWorker %d: failed to merge video and audio for segment %d: %v", w.ID, job.SegmentIdx, err)
+				continue
+			}
+
+			log.Printf("SegmentWorker %d: Merged video and audio for segment %d", w.ID, job.SegmentIdx)
+
+			// Store the merged segment path at the location pointed to by SegmentPath
+			*w.SegmentPath = mergedSegment
+			// Add a log here to trace the stored path
+			log.Printf("SegmentWorker %d: Stored merged segment path for segment %d: %s", w.ID, job.SegmentIdx, *w.SegmentPath)
+		}
+
+		// Add a log here to check the final value of *w.SegmentPath
+		log.Printf("SegmentWorker %d: Final stored merged segment path: %s", w.ID, *w.SegmentPath)
+
+		// Decrement the wait group counter when done
+		wg.Done()
+	}()
+}
+
+func indexOf(element string, data []string) int {
+	for k, v := range data {
+		if element == v {
+			return k
+		}
+	}
+	return -1 // not found.
 }
 
 // Compute the backoff duration based on retry count.
@@ -116,7 +181,8 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to get video duration: %v", err)
 	}
 
-	videoSegmentPaths, voiceSegmentPaths, err := whisper_api.SplitVideoIntoSegmentsByTimestamps(job.FilePath, sentenceTimestamps, videoDuration)
+	// Splitting video into segments and preparing for parallel processing
+	allSegmentPaths, voiceSegmentPaths, err := whisper_api.SplitVideoIntoSegmentsByTimestamps(job.FilePath, sentenceTimestamps, videoDuration)
 	if err != nil {
 		log.Printf("Failed to split video into segments: %v", err)
 		return fmt.Errorf("failed to split video into segments: %v", err)
@@ -124,50 +190,74 @@ func ProcessJob(job Job) error {
 
 	log.Println("Converting audio to standard pronunciation using Acapela TTS API..") // 添加信息
 
-	for i, segment := range voiceSegmentPaths {
-		audioSegment, err := acapela_api.ConvertTextToSpeechUsingAcapela(whisperResp.Segments[i].Text, "Ryan22k_NT", i)
-		if err != nil {
-			log.Printf("Failed to convert text to speech for segment: %v", err)
-			return fmt.Errorf("failed to convert text to speech for segment %d: %v", i, err)
-		}
+	// Create a slice to hold the merged segment paths
+	mergedSegments := make([]string, len(allSegmentPaths))
+	copy(mergedSegments, allSegmentPaths)
 
-		// Merge the voice-over with the video segment and overwrite the original segment
-		var mergedSegment string
-		if strings.HasSuffix(segment, ".mp4") {
-			mergedSegment = strings.TrimSuffix(segment, ".mp4") + "_merged.mp4"
-		} else {
-			mergedSegment = segment + "_merged.mp4"
-		}
-
-		err = audio_processing.MergeVideoAndAudioBySegments(segment, audioSegment, mergedSegment)
-		if err != nil {
-			log.Printf("Failed to merge video and audio for segment: %v", err)
-			return fmt.Errorf("failed to merge video and audio for segment %d: %v", i, err)
-		}
-		// Find the index of the original segment in the videoSegmentPaths
-		originalSegmentIndex := -1
-		for j, videoSegment := range videoSegmentPaths {
-			if videoSegment == segment {
-				originalSegmentIndex = j
-				break
-			}
-		}
-
-		if originalSegmentIndex != -1 {
-			// Replace the original segment path with the merged segment path
-			videoSegmentPaths[originalSegmentIndex] = mergedSegment
-		} else {
-			log.Printf("Warning: original segment not found in videoSegmentPaths: %s", segment)
+	// Create segment workers
+	segmentWorkers := make([]SegmentWorker, len(voiceSegmentPaths))
+	for i, voiceSegment := range voiceSegmentPaths {
+		idx := indexOf(voiceSegment, allSegmentPaths) // Find the index in allSegmentPaths
+		segmentWorkers[i] = SegmentWorker{
+			ID:          i,
+			JobQueue:    make(chan SegmentJob, 1),
+			SegmentPath: &mergedSegments[idx], // Pointer to the corresponding element in mergedSegments
+			SegmentIdx:  idx,                  // Store the index
 		}
 	}
 
-	log.Println("Merging all the video segments..") // 添加信息
+	// Create a wait group to wait for all segment workers to finish
+	var wg sync.WaitGroup
+	wg.Add(len(voiceSegmentPaths))
 
-	outputVideo, err := audio_processing.MergeAllVideoSegmentsTogether(videoSegmentPaths)
+	// Create channels to collect errors
+	errors := make(chan error, len(voiceSegmentPaths))
+
+	// Start the segment workers
+	for i := 0; i < len(segmentWorkers); i++ {
+		segmentWorkers[i].Start(&wg, errors)
+	}
+
+	// Create and add the segment jobs
+	for i := 0; i < len(voiceSegmentPaths); i++ {
+		segmentJob := SegmentJob{
+			Text:       whisperResp.Segments[i].Text,
+			VideoPath:  voiceSegmentPaths[i],
+			Suffix:     "Ryan22k_NT",
+			SegmentIdx: i,
+		}
+		// Add the job to the worker's queue
+		segmentWorkers[i].JobQueue <- segmentJob
+	}
+
+	// Close all job queues for segment workers
+	for i := 0; i < len(segmentWorkers); i++ {
+		close(segmentWorkers[i].JobQueue)
+	}
+
+	// Wait for all segment workers to finish
+	wg.Wait()
+
+	// Check for errors
+	close(errors)
+	for err := range errors {
+		if err != nil {
+			log.Printf("Error processing segment: %v", err)
+			// Handle error as needed
+		}
+	}
+	log.Println("Error checking complete.") // Added log
+
+	// Update allSegmentPaths with the merged segments
+	allSegmentPaths = mergedSegments
+
+	log.Println("Starting to merge all the video segments..")
+	outputVideo, err := audio_processing.MergeAllVideoSegmentsTogether(allSegmentPaths)
 	if err != nil {
 		log.Printf("Failed to merge video segments into final_video: %v", err)
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)
 	}
+	log.Printf("Successfully merged all video segments into %s", outputVideo)
 
 	// 打開outputVideo文件
 	outputFile, err := os.Open(outputVideo)
@@ -176,24 +266,6 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to open the output video: %v", err)
 	}
 	defer outputFile.Close()
-
-	// 讀取前512個字節
-	buffer := make([]byte, 512)
-	_, err = outputFile.Read(buffer)
-	if err != nil && err != io.EOF {
-		log.Printf("Failed to read the output video: %v", err)
-		return fmt.Errorf("failed to read the output video: %v", err)
-	}
-
-	// 使用http.DetectContentType檢測MIME類型
-	contentType := http.DetectContentType(buffer)
-	if contentType != "video/mp4" {
-		log.Printf("Invalid content type detected for output video: %s", contentType)
-		return fmt.Errorf("invalid content type detected for output video: %s", contentType)
-	}
-	log.Println("Output video is in MP4 format and appears to be intact.")
-
-	log.Println("Video processing is complete, and the audio has been replaced with Acapela's TTS output.") // 添加信息
 
 	job.File.Close()
 

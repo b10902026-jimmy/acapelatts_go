@@ -8,8 +8,8 @@ import (
 )
 
 // MergeVideoAndAudio merges a video and an audio file using ffmpeg and outputs to a specified file.
-func MergeVideoAndAudioBySegments(videoPath string, audioPath string, outputPath string) error {
-	tempAudioPath := "temp_audio.mp3"
+func MergeVideoAndAudioBySegments(videoPath string, audioPath string, outputPath string, segmentIdx int) error {
+	tempAudioPath := fmt.Sprintf("temp_audio_segment_%d.mp3", segmentIdx) // Unique name
 
 	// Defer the removal of the temporary audio file
 	defer func() {
@@ -74,12 +74,25 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 	defer os.RemoveAll(tempDir) // Remove the directory after merging
 
 	for index, segmentPath := range segmentPaths {
+
+		// 检查 segmentPath 是否存在
+		if _, err := os.Stat(segmentPath); os.IsNotExist(err) {
+			log.Printf("Segment file does not exist: %s", segmentPath)
+			return "", fmt.Errorf("segment file does not exist: %s", segmentPath)
+		}
+
 		// Convert the audio to 44100 Hz and stereo channel
 		convertedSegmentPath := path.Join(tempDir, fmt.Sprintf("segment%d_converted.mp4", index))
 		err := ExecFFMPEG("-y", "-i", segmentPath, "-ar", "44100", "-ac", "2", convertedSegmentPath)
 		if err != nil {
 			log.Printf("Failed to convert segment: %s, error: %v", segmentPath, err)
 			return "", fmt.Errorf("failed to convert segment: %s, error: %v", segmentPath, err)
+		}
+
+		// 检查 convertedSegmentPath 是否存在和有效
+		if _, err := os.Stat(convertedSegmentPath); os.IsNotExist(err) {
+			log.Printf("Converted segment file does not exist: %s", convertedSegmentPath)
+			return "", fmt.Errorf("converted segment file does not exist: %s", convertedSegmentPath)
 		}
 
 		/*// Print detailed information of each converted segment
