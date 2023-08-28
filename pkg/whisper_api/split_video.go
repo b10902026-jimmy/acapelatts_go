@@ -24,12 +24,12 @@ func SplitVideoIntoSegmentsByTimestamps(videoPath string, sentenceTimestamps []S
 	for i, ts := range sentenceTimestamps {
 		if ts.StartTime > lastEndTime {
 			gapOutputFile := outputDir + fmt.Sprintf("video_gap_segment%d.mp4", i)
-			segmentTimes = append(segmentTimes, ts.StartTime)
+			segmentTimes = append(segmentTimes, lastEndTime, ts.StartTime)
 			allSegmentPaths = append(allSegmentPaths, gapOutputFile)
 		}
 
 		outputFile := outputDir + fmt.Sprintf("video_voice_segment%d.mp4", i)
-		segmentTimes = append(segmentTimes, ts.EndTime)
+		segmentTimes = append(segmentTimes, ts.StartTime, ts.EndTime)
 		allSegmentPaths = append(allSegmentPaths, outputFile)
 		voiceSegmentPaths = append(voiceSegmentPaths, outputFile)
 
@@ -38,6 +38,7 @@ func SplitVideoIntoSegmentsByTimestamps(videoPath string, sentenceTimestamps []S
 
 	if lastEndTime < videoDuration {
 		endOutputFile := outputDir + "video_end_segment.mp4"
+		segmentTimes = append(segmentTimes, lastEndTime, videoDuration)
 		allSegmentPaths = append(allSegmentPaths, endOutputFile)
 	}
 
