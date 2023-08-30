@@ -7,7 +7,7 @@ import (
 	"videoUploadAndProcessing/pkg/audio_processing"
 )
 
-func SplitVideoIntoSegmentsByTimestamps(videoPath string, sentenceTimestamps []SentenceTimestamp, videoDuration float64) ([]string, []string, error) {
+func SplitVideoIntoSegmentsByTimestamps(videoPath string, wordTimestamps []WordTimestamp, videoDuration float64) ([]string, []string, error) {
 	var allSegmentPaths []string
 	var voiceSegmentPaths []string
 	const outputDir = "../pkg/audio_processing/tmp/video/"
@@ -22,7 +22,7 @@ func SplitVideoIntoSegmentsByTimestamps(videoPath string, sentenceTimestamps []S
 	var segmentTimes []float64
 	lastEndTime := 0.0
 	//segmentTimes = append(segmentTimes, lastEndTime)
-	for i, ts := range sentenceTimestamps {
+	for i, ts := range wordTimestamps {
 		if ts.StartTime > lastEndTime {
 			gapOutputFile := outputDir + fmt.Sprintf("video_gap_segment%d.mp4", i)
 			segmentTimes = append(segmentTimes, ts.StartTime)
@@ -57,12 +57,12 @@ func SplitVideoIntoSegmentsByTimestamps(videoPath string, sentenceTimestamps []S
 	fmt.Println("Segment TimesSTR: ", segmentTimesStr)
 
 	err := audio_processing.ExecFFMPEG("-i", videoPath,
-		"-c:v", "libx264", // 使用 libx264 编码器
-		"-c:a", "copy", // 复制音频流，不重新编码
+		"-c:v", "libx264", // encode with libx264  encoder
+		"-c:a", "copy",
 		"-map", "0",
 		"-f", "segment",
 		"-reset_timestamps", "1",
-		"-force_key_frames", segmentTimesStr, // 强制关键帧
+		"-force_key_frames", segmentTimesStr,
 		"-segment_times", segmentTimesStr,
 		outputDir+"segment%d.mp4")
 

@@ -35,7 +35,7 @@ type SentenceTimestamp struct {
 	EndTime   float64 `json:"end_time"`
 }
 
-func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, error) {
+func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []WordTimestamp, error) {
 	url := "https://transcribe.whisperapi.com"
 	method := "POST"
 
@@ -43,12 +43,12 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, err
 	writer := multipart.NewWriter(payload)
 	file, err := writer.CreateFormFile("file", "audio.mp3")
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	_, err = io.Copy(file, audioReader)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	_ = writer.WriteField("fileType", "mp3")
@@ -59,21 +59,21 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, err
 
 	err = writer.Close()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
 
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Add("Authorization", "Bearer "+apiKey)
 
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer res.Body.Close()
 
@@ -83,14 +83,14 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, err
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var whisperResp WhisperResponse
 	err = json.Unmarshal(body, &whisperResp)
 	if err != nil {
 		log.Printf("Error unmarshaling Whisper API response: %v", err)
-		return nil, err
+		return nil, nil, err
 	}
 
 	log.Printf("Whisper API response unmarshaled successfully")
@@ -101,6 +101,19 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, err
 		}
 	*/
 	//log.Printf("Whisper API response text: %s", whisperResp.Text)
+	// 生成基于单词的时间戳列表
+	var wordTimestamps []WordTimestamp
+	for _, segment := range whisperResp.Segments {
+		for _, wholeWordTs := range segment.WholeWordTimestamps {
+			wordTs := WordTimestamp{
+				Word:        wholeWordTs.Word,
+				StartTime:   wholeWordTs.StartTime,
+				EndTime:     wholeWordTs.EndTime,
+				Probability: wholeWordTs.Probability, // 假设这个字段也存在
+			}
+			wordTimestamps = append(wordTimestamps, wordTs)
+		}
+	}
 
-	return &whisperResp, nil
+	return &whisperResp, wordTimestamps, nil
 }
