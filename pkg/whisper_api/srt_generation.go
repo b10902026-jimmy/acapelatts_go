@@ -2,10 +2,18 @@ package whisper_api
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
+
+type SRTSegment struct {
+	StartTime string
+	EndTime   string
+	Text      string
+}
 
 func CreateSRTFile(whisperResp *WhisperResponse) error {
 	// 指定SRT文件的輸出路徑
@@ -64,4 +72,55 @@ func secondsToSRTFormat(seconds float64) string {
 	minutes := (int(seconds) % 3600) / 60
 	seconds = float64(int(seconds)%60) + (seconds - float64(int(seconds)))
 	return fmt.Sprintf("%02d:%02d:%06.3f", hours, minutes, seconds)
+}
+
+func ReadSRTFile(filePath string) ([]SRTSegment, error) {
+
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var segments []SRTSegment
+	scanner := bufio.NewScanner(file)
+	var currentSegment SRTSegment
+	var readingText bool
+
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" {
+			if readingText {
+				segments = append(segments, currentSegment)
+				currentSegment = SRTSegment{}
+				readingText = false
+			}
+			continue
+		}
+
+		if !readingText {
+			if strings.Contains(line, "-->") {
+				times := strings.Split(line, "-->")
+				if len(times) != 2 {
+					return nil, errors.New("invalid time format")
+				}
+				currentSegment.StartTime = strings.TrimSpace(times[0])
+				currentSegment.EndTime = strings.TrimSpace(times[1])
+			} else if _, err := fmt.Sscanf(line, "%d", new(int)); err == nil {
+				// This is the index line, do nothing
+			} else {
+				// This is the text line
+				currentSegment.Text = line
+				readingText = true
+			}
+		} else {
+			currentSegment.Text += " " + line
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return segments, nil
 }
