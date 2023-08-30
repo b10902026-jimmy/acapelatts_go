@@ -7,7 +7,7 @@ import (
 	"videoUploadAndProcessing/pkg/audio_processing"
 )
 
-func SplitVideoIntoSegmentsByTimestamps(videoPath string, sentenceTimestamps []SentenceTimestamp, videoDuration float64) ([]string, []string, error) {
+func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []SRTSegment, videoDuration float64) ([]string, []string, error) {
 	var allSegmentPaths []string
 	var voiceSegmentPaths []string
 	const outputDir = "../pkg/audio_processing/tmp/video/"
@@ -22,7 +22,7 @@ func SplitVideoIntoSegmentsByTimestamps(videoPath string, sentenceTimestamps []S
 	var segmentTimes []float64
 	lastEndTime := 0.0
 	//segmentTimes = append(segmentTimes, lastEndTime)
-	for i, ts := range sentenceTimestamps {
+	for i, ts := range srtSegments {
 		if ts.StartTime > lastEndTime {
 			gapOutputFile := outputDir + fmt.Sprintf("video_gap_segment%d.mp4", i)
 			segmentTimes = append(segmentTimes, ts.StartTime)
