@@ -29,13 +29,14 @@ type WordTimestamp struct {
 	Probability float64 `json:"probability"`
 }
 
+// 定義句子的時間戳結構
 type SentenceTimestamp struct {
 	Sentence  string  `json:"Sentence"`
 	StartTime float64 `json:"start_time"`
 	EndTime   float64 `json:"end_time"`
 }
 
-func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []WordTimestamp, error) {
+func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []SentenceTimestamp, error) {
 	url := "https://transcribe.whisperapi.com"
 	method := "POST"
 
@@ -101,19 +102,17 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []W
 		}
 	*/
 	//log.Printf("Whisper API response text: %s", whisperResp.Text)
-	// 生成基于单词的时间戳列表
-	var wordTimestamps []WordTimestamp
+
+	//Define the content of the sentenceTimestamps for video
+	sentenceTimestamps := []SentenceTimestamp{}
 	for _, segment := range whisperResp.Segments {
-		for _, wholeWordTs := range segment.WholeWordTimestamps {
-			wordTs := WordTimestamp{
-				Word:        wholeWordTs.Word,
-				StartTime:   wholeWordTs.StartTime,
-				EndTime:     wholeWordTs.EndTime,
-				Probability: wholeWordTs.Probability, // 假设这个字段也存在
-			}
-			wordTimestamps = append(wordTimestamps, wordTs)
+		sentenceTimestamp := SentenceTimestamp{
+			Sentence:  segment.Text,
+			StartTime: segment.Start,
+			EndTime:   segment.End,
 		}
+		sentenceTimestamps = append(sentenceTimestamps, sentenceTimestamp)
 	}
 
-	return &whisperResp, wordTimestamps, nil
+	return &whisperResp, sentenceTimestamps, nil
 }
