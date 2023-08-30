@@ -42,12 +42,12 @@ func CreateSRTFile(whisperResp *WhisperResponse) error {
 		// 寫入句子
 		fmt.Fprintln(writer, segment.Text)
 
-		// 寫入單詞時間戳
+		/*// 寫入單詞時間戳
 		for _, wordTimestamp := range segment.WholeWordTimestamps {
 			wordStartTime := secondsToSRTFormat(wordTimestamp.StartTime)
 			wordEndTime := secondsToSRTFormat(wordTimestamp.EndTime)
 			fmt.Fprintf(writer, "%s --> %s: %s\n", wordStartTime, wordEndTime, wordTimestamp.Word)
-		}
+		}*/
 
 		// 添加空行分隔
 		fmt.Fprintln(writer, "")
