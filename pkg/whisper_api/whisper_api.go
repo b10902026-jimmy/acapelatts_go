@@ -36,7 +36,7 @@ type SentenceTimestamp struct {
 	EndTime   float64 `json:"end_time"`
 }
 
-func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []SentenceTimestamp, error) {
+func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, error) {
 	url := "https://transcribe.whisperapi.com"
 	method := "POST"
 
@@ -44,12 +44,12 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []S
 	writer := multipart.NewWriter(payload)
 	file, err := writer.CreateFormFile("file", "audio.mp3")
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	_, err = io.Copy(file, audioReader)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	_ = writer.WriteField("fileType", "mp3")
@@ -60,21 +60,21 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []S
 
 	err = writer.Close()
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, payload)
 
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	req.Header.Add("Authorization", "Bearer "+apiKey)
 
 	res, err := client.Do(req)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 	defer res.Body.Close()
 
@@ -84,14 +84,14 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []S
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	var whisperResp WhisperResponse
 	err = json.Unmarshal(body, &whisperResp)
 	if err != nil {
 		log.Printf("Error unmarshaling Whisper API response: %v", err)
-		return nil, nil, err
+		return nil, err
 	}
 
 	log.Printf("Whisper API response unmarshaled successfully")
@@ -102,17 +102,17 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, []S
 		}
 	*/
 	//log.Printf("Whisper API response text: %s", whisperResp.Text)
+	/*
+		//Define the content of the sentenceTimestamps for video
+		sentenceTimestamps := []SentenceTimestamp{}
+		for _, segment := range whisperResp.Segments {
+			sentenceTimestamp := SentenceTimestamp{
+				Sentence:  segment.Text,
+				StartTime: segment.Start,
+				EndTime:   segment.End,
+			}
+			sentenceTimestamps = append(sentenceTimestamps, sentenceTimestamp)
+		}*/
 
-	//Define the content of the sentenceTimestamps for video
-	sentenceTimestamps := []SentenceTimestamp{}
-	for _, segment := range whisperResp.Segments {
-		sentenceTimestamp := SentenceTimestamp{
-			Sentence:  segment.Text,
-			StartTime: segment.Start,
-			EndTime:   segment.End,
-		}
-		sentenceTimestamps = append(sentenceTimestamps, sentenceTimestamp)
-	}
-
-	return &whisperResp, sentenceTimestamps, nil
+	return &whisperResp, nil
 }

@@ -6,16 +6,17 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 )
 
 type SRTSegment struct {
-	StartTime string
-	EndTime   string
+	StartTime float64
+	EndTime   float64
 	Text      string
 }
 
-func CreateSRTFile(whisperResp *WhisperResponse) error {
+func CreateSRTFile(whisperResp *WhisperResponse) (string, error) {
 	// 指定SRT文件的輸出路徑
 	outputPath := "../pkg/audio_processing/tmp/subtitles/output.srt"
 
@@ -24,14 +25,14 @@ func CreateSRTFile(whisperResp *WhisperResponse) error {
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
 		if err != nil {
-			return fmt.Errorf("failed to create output directory: %v", err)
+			return "", fmt.Errorf("failed to create output directory: %v", err)
 		}
 	}
 
 	// 打開SRT文件進行寫入
 	file, err := os.Create(outputPath)
 	if err != nil {
-		return fmt.Errorf("error creating SRT file: %v", err)
+		return "", fmt.Errorf("error creating SRT file: %v", err)
 	}
 	defer file.Close()
 
@@ -50,20 +51,16 @@ func CreateSRTFile(whisperResp *WhisperResponse) error {
 		// 寫入句子
 		fmt.Fprintln(writer, segment.Text)
 
-		/*
-			// 寫入單詞時間戳
-			for _, wordTimestamp := range segment.WholeWordTimestamps {
-				wordStartTime := secondsToSRTFormat(wordTimestamp.StartTime)
-				wordEndTime := secondsToSRTFormat(wordTimestamp.EndTime)
-				fmt.Fprintf(writer, "%s --> %s: %s\n", wordStartTime, wordEndTime, wordTimestamp.Word)
-			}
-		*/
-
 		// 添加空行分隔
 		fmt.Fprintln(writer, "")
 	}
 
-	return writer.Flush()
+	err = writer.Flush()
+	if err != nil {
+		return "", err
+	}
+
+	return outputPath, nil // 返回生成的SRT文件的路徑
 }
 
 // secondsToSRTFormat將秒轉換為SRT格式的時間戳
@@ -104,8 +101,16 @@ func ReadSRTFile(filePath string) ([]SRTSegment, error) {
 				if len(times) != 2 {
 					return nil, errors.New("invalid time format")
 				}
-				currentSegment.StartTime = strings.TrimSpace(times[0])
-				currentSegment.EndTime = strings.TrimSpace(times[1])
+				startTime, err := srtTimeToSeconds(strings.TrimSpace(times[0]))
+				if err != nil {
+					return nil, err
+				}
+				endTime, err := srtTimeToSeconds(strings.TrimSpace(times[1]))
+				if err != nil {
+					return nil, err
+				}
+				currentSegment.StartTime = startTime
+				currentSegment.EndTime = endTime
 			} else if _, err := fmt.Sscanf(line, "%d", new(int)); err == nil {
 				// This is the index line, do nothing
 			} else {
@@ -123,4 +128,38 @@ func ReadSRTFile(filePath string) ([]SRTSegment, error) {
 	}
 
 	return segments, nil
+}
+
+func srtTimeToSeconds(srtTime string) (float64, error) {
+	parts := strings.Split(srtTime, ":")
+	if len(parts) != 3 {
+		return 0, fmt.Errorf("invalid SRT time format")
+	}
+
+	hours, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return 0, err
+	}
+
+	minutes, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return 0, err
+	}
+
+	secondsParts := strings.Split(parts[2], ",")
+	if len(secondsParts) != 2 {
+		return 0, fmt.Errorf("invalid SRT time format")
+	}
+
+	seconds, err := strconv.Atoi(secondsParts[0])
+	if err != nil {
+		return 0, err
+	}
+
+	milliseconds, err := strconv.Atoi(secondsParts[1])
+	if err != nil {
+		return 0, err
+	}
+
+	return float64(hours*3600+minutes*60+seconds) + float64(milliseconds)/1000.0, nil
 }

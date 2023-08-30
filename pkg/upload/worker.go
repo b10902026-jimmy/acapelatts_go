@@ -83,7 +83,7 @@ func ProcessJob(job Job) error {
 	log.Println("Calling Whisper API") // 添加信息
 
 	// 使用從環境變數獲取的API key
-	whisperResp, sentenceTimestamps, err := whisper_api.CallWhisperAPI(job.APIKey, audioReader)
+	whisperResp, err := whisper_api.CallWhisperAPI(job.APIKey, audioReader)
 	if err != nil {
 		log.Printf("Error calling Whisper API: %v", err)
 		return fmt.Errorf("error calling Whisper API: %v", err)
@@ -91,10 +91,17 @@ func ProcessJob(job Job) error {
 
 	log.Println("Spliting video into segments...")
 
-	err = whisper_api.CreateSRTFile(whisperResp)
+	srtFilePath, err := whisper_api.CreateSRTFile(whisperResp)
 	if err != nil {
 		log.Printf("Error creating SRT file: %v", err)
 		return fmt.Errorf("error creating SRT file: %v", err)
+	}
+
+	// 讀取SRT文件
+	srtSegments, err := whisper_api.ReadSRTFile(srtFilePath)
+	if err != nil {
+		log.Printf("Error reading SRT file: %v", err)
+		return fmt.Errorf("error reading SRT file: %v", err)
 	}
 
 	videoDuration, err := audio_processing.GetVideoDuration(job.FilePath)
@@ -104,7 +111,7 @@ func ProcessJob(job Job) error {
 	}
 
 	// Splitting video into segments and preparing for parallel processing
-	allSegmentPaths, voiceSegmentPaths, err := whisper_api.SplitVideoIntoSegmentsByTimestamps(job.FilePath, sentenceTimestamps, videoDuration)
+	allSegmentPaths, voiceSegmentPaths, err := whisper_api.SplitVideoIntoSegmentsBySRT(job.FilePath, srtSegments, videoDuration)
 	if err != nil {
 		log.Printf("Failed to split video into segments: %v", err)
 		return fmt.Errorf("failed to split video into segments: %v", err)
