@@ -73,7 +73,7 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 	}
 	defer os.RemoveAll(tempDir) // Remove the directory after merging
 
-	log.Println("Normalize all video segments:")
+	log.Println("Normalizing all video segments:")
 
 	for index, segmentPath := range segmentPaths {
 		// Convert the audio to 44100 Hz and stereo channel
@@ -84,11 +84,11 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 			return "", fmt.Errorf("failed to convert segment: %s, error: %v", segmentPath, err)
 		}
 
-		// 检查 convertedSegmentPath 是否存在和有效
+		/*// 检查 convertedSegmentPath 是否存在和有效
 		if _, err := os.Stat(convertedSegmentPath); os.IsNotExist(err) {
 			log.Printf("Converted segment file does not exist: %s", convertedSegmentPath)
 			return "", fmt.Errorf("converted segment file does not exist: %s", convertedSegmentPath)
-		}
+		}*/
 
 		/*// Print detailed information of each converted segment
 		cmd := exec.Command("ffprobe", "-hide_banner", "-i", convertedSegmentPath)
