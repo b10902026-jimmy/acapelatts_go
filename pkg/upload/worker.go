@@ -84,21 +84,23 @@ func ProcessJob(job Job) error {
 
 	// 使用從環境變數獲取的API key
 	whisperResp, err := whisper_api.CallWhisperAPI(job.APIKey, audioReader)
+	_ = whisperResp // This is to avoid the "unused variable" error
+
 	if err != nil {
 		log.Printf("Error calling Whisper API: %v", err)
 		return fmt.Errorf("error calling Whisper API: %v", err)
 	}
 
 	log.Println("Spliting video into segments...")
-
-	srtFilePath, err := whisper_api.CreateSRTFile(whisperResp)
-	if err != nil {
-		log.Printf("Error creating SRT file: %v", err)
-		return fmt.Errorf("error creating SRT file: %v", err)
-	}
+	/*
+		srtFilePath, err := whisper_api.CreateSRTFile(whisperResp)
+		if err != nil {
+			log.Printf("Error creating SRT file: %v", err)
+			return fmt.Errorf("error creating SRT file: %v", err)
+		}*/
 
 	// 讀取SRT文件
-	srtSegments, err := whisper_api.ReadSRTFile(srtFilePath)
+	srtSegments, err := whisper_api.ReadSRTFile("../pkg/audio_processing/tmp/subtitles/output.srt")
 	if err != nil {
 		log.Printf("Error reading SRT file: %v", err)
 		return fmt.Errorf("error reading SRT file: %v", err)
@@ -119,8 +121,8 @@ func ProcessJob(job Job) error {
 
 	log.Println("Converting audio to standard pronunciation using Acapela TTS API..") // 添加信息
 
-	// 现在您可以简单地调用新的 ProcessSegmentWorkers 函数
-	mergedSegments, err := ProcessSegmentJobs(voiceSegmentPaths, allSegmentPaths, *whisperResp)
+	// After spliting video into many segments,create a go worker pool to handle it.
+	mergedSegments, err := ProcessSegmentJobs(voiceSegmentPaths, allSegmentPaths, srtSegments)
 
 	if err != nil {
 		log.Printf("Error while processing segment workers: %v", err)

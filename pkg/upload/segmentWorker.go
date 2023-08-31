@@ -67,7 +67,7 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 }
 
 // Handles the logic for segment workers.
-func ProcessSegmentJobs(voiceSegmentPaths []string, allSegmentPaths []string, whisperResp whisper_api.WhisperResponse) ([]string, error) {
+func ProcessSegmentJobs(voiceSegmentPaths []string, allSegmentPaths []string, srtSegments []whisper_api.SRTSegment) ([]string, error) {
 	var wg sync.WaitGroup
 	errors := make(chan error, len(voiceSegmentPaths))
 
@@ -93,7 +93,7 @@ func ProcessSegmentJobs(voiceSegmentPaths []string, allSegmentPaths []string, wh
 
 	for i := 0; i < len(voiceSegmentPaths); i++ {
 		segmentJob := SegmentJob{
-			Text:       whisperResp.Segments[i].Text,
+			Text:       srtSegments[i].Text,
 			VideoPath:  voiceSegmentPaths[i],
 			Suffix:     "Ryan22k_NT",
 			SegmentIdx: i,

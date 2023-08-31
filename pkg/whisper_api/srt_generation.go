@@ -133,33 +133,32 @@ func ReadSRTFile(filePath string) ([]SRTSegment, error) {
 func srtTimeToSeconds(srtTime string) (float64, error) {
 	parts := strings.Split(srtTime, ":")
 	if len(parts) != 3 {
-		return 0, fmt.Errorf("invalid SRT time format")
+		return 0, fmt.Errorf("invalid SRT time format: %s", srtTime)
 	}
 
 	hours, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("invalid hour format in SRT time: %s", parts[0])
 	}
 
 	minutes, err := strconv.Atoi(parts[1])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("invalid minute format in SRT time: %s", parts[1])
 	}
 
-	secondsParts := strings.Split(parts[2], ",")
+	secondsParts := strings.Split(parts[2], ".")
 	if len(secondsParts) != 2 {
-		return 0, fmt.Errorf("invalid SRT time format")
+		return 0, fmt.Errorf("invalid seconds and milliseconds format in SRT time: %s", parts[2])
 	}
 
 	seconds, err := strconv.Atoi(secondsParts[0])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("invalid second format in SRT time: %s", secondsParts[0])
 	}
 
 	milliseconds, err := strconv.Atoi(secondsParts[1])
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("invalid millisecond format in SRT time: %s", secondsParts[1])
 	}
-
 	return float64(hours*3600+minutes*60+seconds) + float64(milliseconds)/1000.0, nil
 }
