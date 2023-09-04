@@ -80,31 +80,38 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("error extracting audio: %v", err)
 	}
 
-	log.Println("Calling Whisper API") // 添加信息
+	log.Println("Calling Whisper API")
 
-	// 使用從環境變數獲取的API key
-	whisperResp, err := whisper_api.CallWhisperAPI(job.APIKey, audioReader)
-	_ = whisperResp // This is to avoid the "unused variable" error
-
+	whisperAndWordTimestamps, err := whisper_api.CallWhisperAPI(job.APIKey, audioReader)
 	if err != nil {
 		log.Printf("Error calling Whisper API: %v", err)
 		return fmt.Errorf("error calling Whisper API: %v", err)
 	}
 
-	log.Println("Spliting video into segments...")
-	/*
-		srtFilePath, err := whisper_api.CreateSRTFile(whisperResp)
-		if err != nil {
-			log.Printf("Error creating SRT file: %v", err)
-			return fmt.Errorf("error creating SRT file: %v", err)
-		}*/
+	log.Println("Generating SRT file")
+
+	srtFilePath, err := whisper_api.CreateSRTFile(whisperAndWordTimestamps)
+	if err != nil {
+		log.Printf("Error creating SRT file: %v", err)
+		return fmt.Errorf("error creating SRT file: %v", err)
+	}
+
+	outputPath, err := whisper_api.CreateWholeWordTimestampsFile(whisperAndWordTimestamps)
+	if err != nil {
+
+		fmt.Printf("Error creating wholeWordTimestamps file: %v\n", err)
+	} else {
+		fmt.Printf("Created wholeWordTimestamps file at: %s\n", outputPath)
+	}
 
 	// 讀取SRT文件
-	srtSegments, err := whisper_api.ReadSRTFile("../pkg/audio_processing/tmp/subtitles/output.srt")
+	srtSegments, err := whisper_api.ReadSRTFile(srtFilePath)
 	if err != nil {
 		log.Printf("Error reading SRT file: %v", err)
 		return fmt.Errorf("error reading SRT file: %v", err)
 	}
+
+	log.Println("Spliting video into segments...")
 
 	videoDuration, err := audio_processing.GetVideoDuration(job.FilePath)
 	if err != nil {
@@ -139,14 +146,6 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)
 	}
 	log.Printf("Successfully merged all video segments into %s", outputVideo)
-
-	// 打開outputVideo文件
-	outputFile, err := os.Open(outputVideo)
-	if err != nil {
-		log.Printf("Failed to open the output video: %v", err)
-		return fmt.Errorf("failed to open the output video: %v", err)
-	}
-	defer outputFile.Close()
 
 	job.File.Close()
 
