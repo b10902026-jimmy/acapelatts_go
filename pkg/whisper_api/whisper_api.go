@@ -36,7 +36,12 @@ type SentenceTimestamp struct {
 	EndTime   float64 `json:"end_time"`
 }
 
-func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, error) {
+type WhisperAndWordTimestamps struct {
+	WhisperResp    *WhisperResponse
+	WordTimestamps []WordTimestamp
+}
+
+func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperAndWordTimestamps, error) {
 	url := "https://transcribe.whisperapi.com"
 	method := "POST"
 
@@ -101,18 +106,35 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperResponse, err
 			log.Printf("Segment %d Text: %s", i, segment.Text)
 		}
 	*/
-	//log.Printf("Whisper API response text: %s", whisperResp.Text)
-	/*
-		//Define the content of the sentenceTimestamps for video
-		sentenceTimestamps := []SentenceTimestamp{}
-		for _, segment := range whisperResp.Segments {
-			sentenceTimestamp := SentenceTimestamp{
-				Sentence:  segment.Text,
-				StartTime: segment.Start,
-				EndTime:   segment.End,
-			}
-			sentenceTimestamps = append(sentenceTimestamps, sentenceTimestamp)
-		}*/
 
-	return &whisperResp, nil
+	//log.Printf("Whisper API response text: %s", whisperResp.Text)
+
+	//Define the content of the sentenceTimestamps for video
+	/*sentenceTimestamps := []SentenceTimestamp{}
+	for _, segment := range whisperResp.Segments {
+		sentenceTimestamp := SentenceTimestamp{
+			Sentence:  segment.Text,
+			StartTime: segment.Start,
+			EndTime:   segment.End,
+		}
+		sentenceTimestamps = append(sentenceTimestamps, sentenceTimestamp)
+	}*/
+
+	// Populate wordTimestamps
+	wordTimestamps := []WordTimestamp{}
+	for _, segment := range whisperResp.Segments {
+		for _, wordTimestamp := range segment.WholeWordTimestamps {
+			simplifiedWordTimestamp := WordTimestamp{
+				Word:      wordTimestamp.Word,
+				StartTime: wordTimestamp.StartTime,
+				EndTime:   wordTimestamp.EndTime,
+			}
+			wordTimestamps = append(wordTimestamps, simplifiedWordTimestamp)
+		}
+	}
+
+	return &WhisperAndWordTimestamps{
+		WhisperResp:    &whisperResp,
+		WordTimestamps: wordTimestamps,
+	}, nil
 }
