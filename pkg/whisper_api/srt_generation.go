@@ -2,8 +2,10 @@ package whisper_api
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -16,27 +18,20 @@ type SRTSegment struct {
 	Text      string
 }
 
-func CreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
-	// 指定SRT文件的輸出路徑
-	outputPath := "../pkg/audio_processing/tmp/subtitles/output.srt"
-
+func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (io.Reader, error) {
 	// 檢查並創建目錄（如果不存在）
+	outputPath := "../pkg/audio_processing/tmp/subtitles/output.srt"
 	outputDir := filepath.Dir(outputPath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
 		if err != nil {
-			return "", fmt.Errorf("failed to create output directory: %v", err)
+			return nil, fmt.Errorf("failed to create output directory: %v", err)
 		}
 	}
 
-	// 打開SRT文件進行寫入
-	file, err := os.Create(outputPath)
-	if err != nil {
-		return "", fmt.Errorf("error creating SRT file: %v", err)
-	}
-	defer file.Close()
-
-	writer := bufio.NewWriter(file)
+	// 創建一個緩衝區用於寫入SRT資料
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
 
 	// 迭代每個片段並寫入SRT格式
 	for i, segment := range whisperAndWordTimestamps.WhisperResp.Segments {
@@ -55,12 +50,11 @@ func CreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, 
 		fmt.Fprintln(writer, "")
 	}
 
-	err = writer.Flush()
-	if err != nil {
-		return "", err
+	if err := writer.Flush(); err != nil {
+		return nil, fmt.Errorf("failed to flush the buffer: %v", err)
 	}
 
-	return outputPath, nil // 返回生成的SRT文件的路徑
+	return bytes.NewReader(buf.Bytes()), nil
 }
 
 // secondsToSRTFormat將秒轉換為SRT格式的時間戳
@@ -104,16 +98,9 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 	return outputPath, nil
 }
 
-func ReadSRTFile(filePath string) ([]SRTSegment, error) {
-
-	file, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
+func ReadSRTStream(srtReader io.Reader) ([]SRTSegment, error) {
 	var segments []SRTSegment
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(srtReader)
 	var currentSegment SRTSegment
 	var readingText bool
 

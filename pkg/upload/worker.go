@@ -61,12 +61,13 @@ func ProcessJob(job Job) error {
 	defer job.File.Close()
 
 	log.Println("Processing vedio..") // 添加信息
+	log.Println("Extracting aduio from video streamly")
 
 	// 使用新打開的file讀取器提取音訊
-	audioReader, err := audio_processing.ExtractAudioFromVideo(job.FilePath)
+	audioReader, err := audio_processing.StreamedExtractAudioFromVideo(job.FilePath)
 	if err != nil {
 		log.Printf("Error extracting audio: %v", err)
-		job.File.Close()
+
 		return fmt.Errorf("error extracting audio: %v", err)
 	}
 
@@ -78,9 +79,9 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("error calling Whisper API: %v", err)
 	}
 
-	log.Println("Generating SRT file")
+	log.Println("Generating SRT file streamly")
 
-	srtFilePath, err := whisper_api.CreateSRTFile(whisperAndWordTimestamps)
+	srtReader, err := whisper_api.StreamedCreateSRTFile(whisperAndWordTimestamps)
 	if err != nil {
 		log.Printf("Error creating SRT file: %v", err)
 		return fmt.Errorf("error creating SRT file: %v", err)
@@ -95,10 +96,10 @@ func ProcessJob(job Job) error {
 	}
 
 	// 讀取SRT文件
-	srtSegments, err := whisper_api.ReadSRTFile(srtFilePath)
+	srtSegments, err := whisper_api.ReadSRTStream(srtReader)
 	if err != nil {
-		log.Printf("Error reading SRT file: %v", err)
-		return fmt.Errorf("error reading SRT file: %v", err)
+		log.Printf("Error reading SRT stream: %v", err)
+		return fmt.Errorf("error reading SRT stream: %v", err)
 	}
 
 	log.Println("Spliting video into segments...")
