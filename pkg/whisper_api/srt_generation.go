@@ -72,10 +72,8 @@ func secondsToSRTFormat(seconds float64) string {
 }
 
 func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
-	// 指定輸出文件的路徑
-	outputPath := "../pkg/audio_processing/tmp/subtitles/wholeWordTimestamps.txt"
+	outputPath := "../pkg/audio_processing/tmp/subtitles/wholeWordTimestamps.srt"
 
-	// 檢查並創建目錄（如果不存在）
 	outputDir := filepath.Dir(outputPath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
@@ -84,7 +82,6 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 		}
 	}
 
-	// 打開文件進行寫入
 	file, err := os.Create(outputPath)
 	if err != nil {
 		return "", fmt.Errorf("error creating wholeWordTimestamps file: %v", err)
@@ -93,12 +90,10 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 
 	writer := bufio.NewWriter(file)
 
-	// 迭代所有的WordTimestamps並寫入文件
-	for i, wordTimestamp := range whisperAndWordTimestamps.WordTimestamps {
-		if i > 0 {
-			_, _ = writer.WriteString(",") // 添加逗號作為分隔符
-		}
-		fmt.Fprintf(writer, "%.2f->%.2f:%s", wordTimestamp.StartTime, wordTimestamp.EndTime, wordTimestamp.Word)
+	for _, wordTimestamp := range whisperAndWordTimestamps.WordTimestamps {
+		//fmt.Fprintf(writer, "%d\n", i+1) // SRT序號
+		fmt.Fprintf(writer, "%f --> %f", wordTimestamp.StartTime, wordTimestamp.EndTime)
+		fmt.Fprintf(writer, "%s", wordTimestamp.Word) // 實際的字詞和一個空行
 	}
 
 	err = writer.Flush()
@@ -106,7 +101,7 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 		return "", err
 	}
 
-	return outputPath, nil // 返回生成的wholeWordTimestamps文件的路徑
+	return outputPath, nil
 }
 
 func ReadSRTFile(filePath string) ([]SRTSegment, error) {
