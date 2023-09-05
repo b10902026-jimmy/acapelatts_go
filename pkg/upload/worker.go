@@ -81,7 +81,7 @@ func ProcessJob(job Job) error {
 
 	log.Println("Generating SRT file streamly")
 
-	srtReader, err := whisper_api.StreamedCreateSRTFile(whisperAndWordTimestamps)
+	srtFilePath, err := whisper_api.StreamedCreateSRTFile(whisperAndWordTimestamps)
 	if err != nil {
 		log.Printf("Error creating SRT file: %v", err)
 		return fmt.Errorf("error creating SRT file: %v", err)
@@ -96,10 +96,10 @@ func ProcessJob(job Job) error {
 	}
 
 	// 讀取SRT文件
-	srtSegments, err := whisper_api.ReadSRTStream(srtReader)
+	srtSegments, err := whisper_api.ReadSRTFileFromPath(srtFilePath)
 	if err != nil {
-		log.Printf("Error reading SRT stream: %v", err)
-		return fmt.Errorf("error reading SRT stream: %v", err)
+		log.Printf("Error reading SRT file: %v", err)
+		return fmt.Errorf("error reading SRT file: %v", err)
 	}
 
 	log.Println("Spliting video into segments...")
