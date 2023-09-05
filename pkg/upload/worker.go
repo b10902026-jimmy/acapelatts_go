@@ -11,8 +11,8 @@ import (
 
 const NumWorkers = 50 // 設定工作人員的數量
 
-const InitialBackoffDuration = 5000 * time.Millisecond // 初始回退時間
-const MaxBackoffDuration = 16 * time.Second            // 最大回退時間
+const InitialBackoffDuration = 500 * time.Millisecond // 初始回退時間
+const MaxBackoffDuration = 16 * time.Second           // 最大回退時間
 
 type Job struct {
 	File     io.ReadCloser
@@ -62,12 +62,11 @@ func ProcessJob(job Job) error {
 
 	log.Println("Processing vedio..") // 添加信息
 
-	log.Println("Extracting audio from uploaded video..")
-
 	// 使用新打開的file讀取器提取音訊
 	audioReader, err := audio_processing.ExtractAudioFromVideo(job.FilePath)
 	if err != nil {
 		log.Printf("Error extracting audio: %v", err)
+		job.File.Close()
 		return fmt.Errorf("error extracting audio: %v", err)
 	}
 
@@ -137,6 +136,8 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)
 	}
 	log.Printf("Successfully merged all video segments into %s", outputVideo)
+
+	job.File.Close()
 
 	// 工作完成，發送通知
 	job.Done <- true
