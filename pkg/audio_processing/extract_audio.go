@@ -10,7 +10,15 @@ import (
 	"github.com/xfrr/goffmpeg/transcoder"
 )
 
-func ExtractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
+func ExtractAudioFromVideo(filePath string) (io.Reader, error) {
+	// 打開文件以供讀取
+	file, err := os.Open(filePath)
+	if err != nil {
+		log.Printf("Failed to open the file: %v", err)
+		return nil, fmt.Errorf("failed to open the file: %v", err)
+	}
+	defer file.Close()
+
 	inputFileTemp, err := os.CreateTemp("", "input-*.mp4")
 	if err != nil {
 		return nil, fmt.Errorf("error creating temporary input file: %v", err)
@@ -27,7 +35,7 @@ func ExtractAudioFromVideo(inputFile io.Reader) (io.Reader, error) {
 	defer os.Remove(outputFilePath)
 
 	// 將上傳的文件保存到臨時文件中
-	_, err = io.Copy(inputFileTemp, inputFile) // 直接將 inputFile 的資料流寫入到你的臨時檔案
+	_, err = io.Copy(inputFileTemp, file) // 直接將 inputFile 的資料流寫入到你的臨時檔案
 	if err != nil {
 		os.Remove(inputFilePath)  // 刪除輸入暫存檔案
 		os.Remove(outputFilePath) // 刪除輸出暫存檔案

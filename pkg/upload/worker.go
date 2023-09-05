@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"time"
 	"videoUploadAndProcessing/pkg/audio_processing"
 	"videoUploadAndProcessing/pkg/whisper_api"
@@ -12,8 +11,8 @@ import (
 
 const NumWorkers = 50 // 設定工作人員的數量
 
-const InitialBackoffDuration = 500 * time.Millisecond // 初始回退時間
-const MaxBackoffDuration = 16 * time.Second           // 最大回退時間
+const InitialBackoffDuration = 5000 * time.Millisecond // 初始回退時間
+const MaxBackoffDuration = 16 * time.Second            // 最大回退時間
 
 type Job struct {
 	File     io.ReadCloser
@@ -62,21 +61,13 @@ func ProcessJob(job Job) error {
 	defer job.File.Close()
 
 	log.Println("Processing vedio..") // 添加信息
+
 	log.Println("Extracting audio from uploaded video..")
-	// 使用os.Open重新打開文件以供讀取
-	file, err := os.Open(job.FilePath)
-	if err != nil {
-		log.Printf("Failed to open the file: %v", err)
-		job.File.Close()
-		return fmt.Errorf("failed to open the file: %v", err)
-	}
-	defer file.Close()
 
 	// 使用新打開的file讀取器提取音訊
-	audioReader, err := audio_processing.ExtractAudioFromVideo(file)
+	audioReader, err := audio_processing.ExtractAudioFromVideo(job.FilePath)
 	if err != nil {
 		log.Printf("Error extracting audio: %v", err)
-		job.File.Close()
 		return fmt.Errorf("error extracting audio: %v", err)
 	}
 
@@ -89,12 +80,12 @@ func ProcessJob(job Job) error {
 	}
 
 	log.Println("Generating SRT file")
-	/*
-		srtFilePath, err := whisper_api.CreateSRTFile(whisperAndWordTimestamps)
-		if err != nil {
-			log.Printf("Error creating SRT file: %v", err)
-			return fmt.Errorf("error creating SRT file: %v", err)
-		}*/
+
+	srtFilePath, err := whisper_api.CreateSRTFile(whisperAndWordTimestamps)
+	if err != nil {
+		log.Printf("Error creating SRT file: %v", err)
+		return fmt.Errorf("error creating SRT file: %v", err)
+	}
 
 	outputPath, err := whisper_api.CreateWholeWordTimestampsFile(whisperAndWordTimestamps)
 	if err != nil {
@@ -105,7 +96,7 @@ func ProcessJob(job Job) error {
 	}
 
 	// 讀取SRT文件
-	srtSegments, err := whisper_api.ReadSRTFile("../pkg/audio_processing/tmp/subtitles/output.srt")
+	srtSegments, err := whisper_api.ReadSRTFile(srtFilePath)
 	if err != nil {
 		log.Printf("Error reading SRT file: %v", err)
 		return fmt.Errorf("error reading SRT file: %v", err)
@@ -146,8 +137,6 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)
 	}
 	log.Printf("Successfully merged all video segments into %s", outputVideo)
-
-	job.File.Close()
 
 	// 工作完成，發送通知
 	job.Done <- true
