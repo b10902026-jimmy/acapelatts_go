@@ -89,12 +89,12 @@ func ProcessJob(job Job) error {
 	}
 
 	log.Println("Generating SRT file")
-
-	srtFilePath, err := whisper_api.CreateSRTFile(whisperAndWordTimestamps)
-	if err != nil {
-		log.Printf("Error creating SRT file: %v", err)
-		return fmt.Errorf("error creating SRT file: %v", err)
-	}
+	/*
+		srtFilePath, err := whisper_api.CreateSRTFile(whisperAndWordTimestamps)
+		if err != nil {
+			log.Printf("Error creating SRT file: %v", err)
+			return fmt.Errorf("error creating SRT file: %v", err)
+		}*/
 
 	outputPath, err := whisper_api.CreateWholeWordTimestampsFile(whisperAndWordTimestamps)
 	if err != nil {
@@ -105,7 +105,7 @@ func ProcessJob(job Job) error {
 	}
 
 	// 讀取SRT文件
-	srtSegments, err := whisper_api.ReadSRTFile(srtFilePath)
+	srtSegments, err := whisper_api.ReadSRTFile("../pkg/audio_processing/tmp/subtitles/output.srt")
 	if err != nil {
 		log.Printf("Error reading SRT file: %v", err)
 		return fmt.Errorf("error reading SRT file: %v", err)
