@@ -2,10 +2,8 @@ package whisper_api
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -18,20 +16,24 @@ type SRTSegment struct {
 	Text      string
 }
 
-func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (io.Reader, error) {
+func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
 	// 檢查並創建目錄（如果不存在）
 	outputPath := "../pkg/audio_processing/tmp/subtitles/output.srt"
 	outputDir := filepath.Dir(outputPath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create output directory: %v", err)
+			return "", fmt.Errorf("failed to create output directory: %v", err)
 		}
 	}
 
-	// 創建一個緩衝區用於寫入SRT資料
-	var buf bytes.Buffer
-	writer := bufio.NewWriter(&buf)
+	// 打開SRT文件進行寫入
+	file, err := os.Create(outputPath)
+	if err != nil {
+		return "", fmt.Errorf("error creating SRT file: %v", err)
+	}
+	defer file.Close()
+	writer := bufio.NewWriter(file)
 
 	// 迭代每個片段並寫入SRT格式
 	for i, segment := range whisperAndWordTimestamps.WhisperResp.Segments {
@@ -51,10 +53,10 @@ func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (
 	}
 
 	if err := writer.Flush(); err != nil {
-		return nil, fmt.Errorf("failed to flush the buffer: %v", err)
+		return "", fmt.Errorf("failed to flush the buffer: %v", err)
 	}
 
-	return bytes.NewReader(buf.Bytes()), nil
+	return outputPath, nil // 返回生成的SRT文件的路徑
 }
 
 // secondsToSRTFormat將秒轉換為SRT格式的時間戳
@@ -98,9 +100,16 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 	return outputPath, nil
 }
 
-func ReadSRTStream(srtReader io.Reader) ([]SRTSegment, error) {
+func ReadSRTFileFromPath(filePath string) ([]SRTSegment, error) {
+	// 打開SRT文件以供讀取
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
 	var segments []SRTSegment
-	scanner := bufio.NewScanner(srtReader)
+	scanner := bufio.NewScanner(file)
 	var currentSegment SRTSegment
 	var readingText bool
 
