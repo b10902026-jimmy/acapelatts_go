@@ -3,6 +3,7 @@ package whisper_api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"log"
 	"mime/multipart"
@@ -42,6 +43,7 @@ type WhisperAndWordTimestamps struct {
 }
 
 func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperAndWordTimestamps, error) {
+
 	url := "https://transcribe.whisperapi.com"
 	method := "POST"
 
@@ -81,17 +83,19 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperAndWordTimest
 	if err != nil {
 		return nil, err
 	}
+	log.Printf("Status Code: %d", res.StatusCode)
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		log.Printf("Whisper API responded with status code: %d", res.StatusCode)
+		return nil, errors.New("received non-200 status code")
 	}
 
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
-
+	log.Printf("Response Body: %s", string(body))
 	var whisperResp WhisperResponse
 	err = json.Unmarshal(body, &whisperResp)
 	if err != nil {
@@ -107,7 +111,7 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperAndWordTimest
 		}
 	*/
 
-	//log.Printf("Whisper API response text: %s", whisperResp.Text)
+	log.Printf("Whisper API response text: %+v", whisperResp)
 
 	//Define the content of the sentenceTimestamps for video
 	/*sentenceTimestamps := []SentenceTimestamp{}
