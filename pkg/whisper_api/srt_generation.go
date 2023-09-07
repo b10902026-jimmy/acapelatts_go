@@ -61,10 +61,9 @@ func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (
 
 // secondsToSRTFormat將秒轉換為SRT格式的時間戳
 func secondsToSRTFormat(seconds float64) string {
-	hours := int(seconds) / 3600
 	minutes := (int(seconds) % 3600) / 60
 	seconds = float64(int(seconds)%60) + (seconds - float64(int(seconds)))
-	return fmt.Sprintf("%02d:%02d:%06.3f", hours, minutes, seconds)
+	return fmt.Sprintf("%02d:%06.3f", minutes, seconds)
 }
 
 func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
@@ -86,10 +85,10 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 
 	writer := bufio.NewWriter(file)
 
-	for _, wordTimestamp := range whisperAndWordTimestamps.WordTimestamps {
-		//fmt.Fprintf(writer, "%d\n", i+1) // SRT序號
-		fmt.Fprintf(writer, "%f --> %f", wordTimestamp.StartTime, wordTimestamp.EndTime)
-		fmt.Fprintf(writer, "%s", wordTimestamp.Word) // 實際的字詞和一個空行
+	for i, wordTimestamp := range whisperAndWordTimestamps.WordTimestamps {
+		fmt.Fprintf(writer, "%d\n", i+1) // SRT序號
+		fmt.Fprintf(writer, "%s --> %s\n", secondsToSRTFormat(wordTimestamp.StartTime), secondsToSRTFormat(wordTimestamp.EndTime))
+		fmt.Fprintf(writer, "%s\n\n", wordTimestamp.Word) // 實際的字詞和一個空行
 	}
 
 	err = writer.Flush()
@@ -159,35 +158,26 @@ func ReadSRTFileFromPath(filePath string) ([]SRTSegment, error) {
 	return segments, nil
 }
 
-func srtTimeToSeconds(srtTime string) (float64, error) {
-	parts := strings.Split(srtTime, ":")
-	if len(parts) != 3 {
-		return 0, fmt.Errorf("invalid SRT time format: %s", srtTime)
+func srtTimeToSeconds(timeStr string) (float64, error) {
+	parts := strings.Split(timeStr, ":")
+	if len(parts) != 2 {
+		return 0, errors.New("invalid time format")
 	}
-
-	hours, err := strconv.Atoi(parts[0])
+	minutes, err := strconv.Atoi(parts[0])
 	if err != nil {
-		return 0, fmt.Errorf("invalid hour format in SRT time: %s", parts[0])
+		return 0, err
 	}
-
-	minutes, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return 0, fmt.Errorf("invalid minute format in SRT time: %s", parts[1])
-	}
-
-	secondsParts := strings.Split(parts[2], ".")
+	secondsParts := strings.Split(parts[1], ".")
 	if len(secondsParts) != 2 {
-		return 0, fmt.Errorf("invalid seconds and milliseconds format in SRT time: %s", parts[2])
+		return 0, errors.New("invalid time format")
 	}
-
 	seconds, err := strconv.Atoi(secondsParts[0])
 	if err != nil {
-		return 0, fmt.Errorf("invalid second format in SRT time: %s", secondsParts[0])
+		return 0, err
 	}
-
 	milliseconds, err := strconv.Atoi(secondsParts[1])
 	if err != nil {
-		return 0, fmt.Errorf("invalid millisecond format in SRT time: %s", secondsParts[1])
+		return 0, err
 	}
-	return float64(hours*3600+minutes*60+seconds) + float64(milliseconds)/1000.0, nil
+	return float64(minutes*60) + float64(seconds) + float64(milliseconds)/1000.0, nil
 }

@@ -95,7 +95,7 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperAndWordTimest
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Response Body: %s", string(body))
+	//log.Printf("Response Body: %s", string(body))
 	var whisperResp WhisperResponse
 	err = json.Unmarshal(body, &whisperResp)
 	if err != nil {
@@ -111,7 +111,7 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperAndWordTimest
 		}
 	*/
 
-	log.Printf("Whisper API response text: %+v", whisperResp)
+	log.Printf("Whisper API response text: %+v", whisperResp.Text)
 
 	//Define the content of the sentenceTimestamps for video
 	/*sentenceTimestamps := []SentenceTimestamp{}

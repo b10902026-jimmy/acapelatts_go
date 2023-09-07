@@ -57,7 +57,6 @@ func getBackoffDuration(retryCount int) time.Duration {
 }
 
 func ProcessJob(job Job) error {
-
 	defer job.File.Close()
 
 	log.Println("Processing vedio..") // 添加信息
@@ -73,39 +72,6 @@ func ProcessJob(job Job) error {
 
 	log.Println("Calling Whisper API")
 
-	/*// Save audioReader to a temporary file
-	tempFile, err := os.CreateTemp("", "audio_*.wav")
-	if err != nil {
-		log.Printf("Failed to create temporary file: %v", err)
-		return err
-	}
-	defer os.Remove(tempFile.Name())
-
-	_, err = io.Copy(tempFile, audioReader)
-	if err != nil {
-		log.Printf("Failed to write to temporary file: %v", err)
-		return err
-	}
-
-	tempFile.Close()
-
-	// Run FFmpeg to get the duration
-	cmd := exec.Command("ffprobe", "-i", tempFile.Name(), "-show_entries", "format=duration", "-v", "quiet", "-of", "csv=p=0")
-	durationOutput, err := cmd.Output()
-	if err != nil {
-		log.Printf("Failed to run ffprobe: %v", err)
-		return err
-	}
-
-	durationStr := strings.TrimSpace(string(durationOutput))
-	duration, err := strconv.ParseFloat(durationStr, 64)
-	if err != nil {
-		log.Printf("Failed to parse duration: %v", err)
-		return err
-	}
-
-	log.Printf("Audio duration: %f seconds", duration)
-	*/
 	whisperAndWordTimestamps, err := whisper_api.CallWhisperAPI(job.APIKey, audioReader)
 	if err != nil {
 		log.Printf("Error calling Whisper API: %v", err)
