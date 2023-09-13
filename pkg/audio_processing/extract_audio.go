@@ -18,7 +18,7 @@ func StreamedExtractAudioFromVideo(filePath string) (io.Reader, error) {
 	}
 
 	// 保存MP3文件到當前工作目錄
-	mp3File, err := os.Create("output.wav")
+	mp3File, err := os.Create("output.mp3")
 	if err != nil {
 		log.Printf("Failed to create MP3 file: %v", err)
 		return nil, err
