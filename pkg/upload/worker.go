@@ -37,8 +37,8 @@ func (w Worker) Start() {
 					job.Retries++
 					backoffDuration := getBackoffDuration(job.Retries)
 					log.Printf("Job failed, retrying after %v", backoffDuration)
-					time.Sleep(backoffDuration) // Apply backoff delay
-					w.JobQueue <- job           // 將工作重新放入佇列
+					time.Sleep(backoffDuration)
+					w.JobQueue <- job // 將工作重新放入佇列
 				} else {
 					log.Printf("Job failed after %d retries", job.Retries)
 				}
@@ -62,7 +62,7 @@ func ProcessJob(job Job) error {
 	log.Println("Processing vedio..") // 添加信息
 	log.Println("Extracting aduio from video streamly")
 
-	// 使用新打開的file讀取器提取音訊
+	// 使用新打開的file讀取器提取音訊(流式)
 	audioReader, err := audio_processing.StreamedExtractAudioFromVideo(job.FilePath)
 	if err != nil {
 		log.Printf("Error extracting audio: %v", err)
@@ -70,8 +70,8 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("error extracting audio: %v", err)
 	}
 
-	log.Println("Calling Whisper API")
-
+	log.Println("Calling Whisper API and wating for response")
+	//呼叫STT API(whisper)
 	whisperAndWordTimestamps, err := whisper_api.CallWhisperAPI(job.APIKey, audioReader)
 	if err != nil {
 		log.Printf("Error calling Whisper API: %v", err)
@@ -80,12 +80,14 @@ func ProcessJob(job Job) error {
 
 	log.Println("Generating SRT file streamly")
 
+	//根據STT結果創建SRT file(流式)
 	srtFilePath, err := whisper_api.StreamedCreateSRTFile(whisperAndWordTimestamps)
 	if err != nil {
 		log.Printf("Error creating SRT file: %v", err)
 		return fmt.Errorf("error creating SRT file: %v", err)
 	}
 
+	//創建所有單詞的時間戳
 	outputPath, err := whisper_api.CreateWholeWordTimestampsFile(whisperAndWordTimestamps)
 	if err != nil {
 
@@ -103,6 +105,7 @@ func ProcessJob(job Job) error {
 
 	log.Println("Spliting video into segments...")
 
+	//獲取影片時長
 	videoDuration, err := audio_processing.GetVideoDuration(job.FilePath)
 	if err != nil {
 		log.Printf("Failed to get video duration: %v", err)
@@ -116,7 +119,7 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to split video into segments: %v", err)
 	}
 
-	log.Println("Converting audio to standard pronunciation using Acapela TTS API..") // 添加信息
+	log.Println("Converting audio to standard pronunciation using Acapela TTS API..")
 
 	// After spliting video into many segments,create a go worker pool to handle it.
 	mergedSegments, err := ProcessSegmentJobs(voiceSegmentPaths, allSegmentPaths, srtSegments)

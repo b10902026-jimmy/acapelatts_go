@@ -73,7 +73,7 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 	}
 	defer os.RemoveAll(tempDir) // Remove the directory after merging
 
-	log.Println("Normalizing all video segments:")
+	log.Println("Normalizing all video segments...")
 
 	for index, segmentPath := range segmentPaths {
 		// Convert the audio to 44100 Hz and stereo channel
