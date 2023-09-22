@@ -60,6 +60,15 @@ func ProcessJob(job Job) error {
 	defer job.File.Close()
 
 	log.Println("Processing vedio..") // 添加信息
+
+	// 獲取影片的metadata
+	metadata, err := audio_processing.GetVideoMetadata(job.FilePath)
+	if err != nil {
+		log.Printf("Failed to get video metadata: %v", err)
+		return fmt.Errorf("failed to get video metadata: %v", err)
+	}
+	log.Printf("Video's Metadata: %+v\n", metadata)
+
 	log.Println("Extracting aduio from video streamly")
 
 	// 使用新打開的file讀取器提取音訊(流式)
