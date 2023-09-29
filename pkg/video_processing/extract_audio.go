@@ -1,4 +1,4 @@
-package audio_processing
+package video_processing
 
 import (
 	"bytes"

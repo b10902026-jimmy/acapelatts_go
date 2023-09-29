@@ -5,7 +5,7 @@ import (
 	"io"
 	"log"
 	"time"
-	"videoUploadAndProcessing/pkg/audio_processing"
+	"videoUploadAndProcessing/pkg/video_processing"
 	"videoUploadAndProcessing/pkg/whisper_api"
 )
 
@@ -62,7 +62,7 @@ func ProcessJob(job Job) error {
 	log.Println("Processing vedio..") // 添加信息
 
 	// 獲取影片的metadata
-	metadata, err := audio_processing.GetVideoMetadata(job.FilePath)
+	metadata, err := video_processing.GetVideoMetadata(job.FilePath)
 	if err != nil {
 		log.Printf("Failed to get video metadata: %v", err)
 		return fmt.Errorf("failed to get video metadata: %v", err)
@@ -72,7 +72,7 @@ func ProcessJob(job Job) error {
 	log.Println("Extracting aduio from video streamly")
 
 	// 使用新打開的file讀取器提取音訊(流式)
-	audioReader, err := audio_processing.StreamedExtractAudioFromVideo(job.FilePath)
+	audioReader, err := video_processing.StreamedExtractAudioFromVideo(job.FilePath)
 	if err != nil {
 		log.Printf("Error extracting audio: %v", err)
 
@@ -115,14 +115,14 @@ func ProcessJob(job Job) error {
 	log.Println("Spliting video into segments...")
 
 	//獲取影片時長
-	videoDuration, err := audio_processing.GetVideoDuration(job.FilePath)
+	videoDuration, err := video_processing.GetVideoDuration(job.FilePath)
 	if err != nil {
 		log.Printf("Failed to get video duration: %v", err)
 		return fmt.Errorf("failed to get video duration: %v", err)
 	}
 
 	// Splitting video into segments and preparing for parallel processing
-	allSegmentPaths, voiceSegmentPaths, err := whisper_api.SplitVideoIntoSegmentsBySRT(job.FilePath, srtSegments, videoDuration)
+	allSegmentPaths, voiceSegmentPaths, err := video_processing.SplitVideoIntoSegmentsBySRT(job.FilePath, srtSegments, videoDuration)
 	if err != nil {
 		log.Printf("Failed to split video into segments: %v", err)
 		return fmt.Errorf("failed to split video into segments: %v", err)
@@ -142,7 +142,7 @@ func ProcessJob(job Job) error {
 	allSegmentPaths = mergedSegments
 
 	log.Println("Starting to merge all the video segments..")
-	outputVideo, err := audio_processing.MergeAllVideoSegmentsTogether(allSegmentPaths)
+	outputVideo, err := video_processing.MergeAllVideoSegmentsTogether(allSegmentPaths)
 	if err != nil {
 		log.Printf("Failed to merge video segments into final_video: %v", err)
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)

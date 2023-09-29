@@ -1,10 +1,10 @@
-package whisper_api
+package video_processing
 
 import (
 	"fmt"
 	"os"
 	"strings"
-	"videoUploadAndProcessing/pkg/audio_processing"
+	"videoUploadAndProcessing/pkg/whisper_api"
 )
 
 type VideoSegment struct {
@@ -12,10 +12,10 @@ type VideoSegment struct {
 	Duration float64
 }
 
-func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []SRTSegment, videoDuration float64) ([]string, []string, error) {
+func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRTSegment, videoDuration float64) ([]string, []string, error) {
 	var allSegmentPaths []string
 	var voiceSegmentPaths []string
-	const outputDir = "../pkg/audio_processing/tmp/video/"
+	const outputDir = "/home/user/videoUploadAndProcessing_go/pkg/video_processing/tmp/video/"
 
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
@@ -70,7 +70,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []SRTSegment, vid
 	fmt.Println("Segment Times: ", segmentTimes)
 	fmt.Println("Segment TimesSTR: ", segmentTimesStr)
 
-	err := audio_processing.ExecFFMPEG("-i", videoPath,
+	err := execFFMPEG("-i", videoPath,
 		"-c:v", "libx264",
 		"-c:a", "copy",
 		"-map", "0",
@@ -127,14 +127,14 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []SRTSegment, vid
 		// 生成靜音音軌
 		tempAudioPath := outputDir + "temp_audio.aac"
 		durationStr := fmt.Sprintf("%f", nonVoiceDurations[i])
-		err := audio_processing.ExecFFMPEG("-y", "-f", "lavfi", "-t", durationStr, "-i", "anullsrc=r=44100:cl=stereo", tempAudioPath)
+		err := execFFMPEG("-y", "-f", "lavfi", "-t", durationStr, "-i", "anullsrc=r=44100:cl=stereo", tempAudioPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error generating silent audio: %v", err)
 		}
 
 		// 合併靜音音軌與原片段視頻
 		tempVideoPath := outputDir + "temp_video.mp4"
-		err = audio_processing.ExecFFMPEG("-i", path, "-i", tempAudioPath, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-map", "0:v", "-map", "1:a", tempVideoPath)
+		err = execFFMPEG("-i", path, "-i", tempAudioPath, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-map", "0:v", "-map", "1:a", tempVideoPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error merging video and audio: %v", err)
 		}
