@@ -18,7 +18,7 @@ type SRTSegment struct {
 
 func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
 	// 檢查並創建目錄（如果不存在）
-	outputPath := "../pkg/audio_processing/tmp/subtitles/output.srt"
+	outputPath := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/tmp/subtitles/output.srt"
 	outputDir := filepath.Dir(outputPath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
@@ -67,7 +67,7 @@ func secondsToSRTFormat(seconds float64) string {
 }
 
 func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
-	outputPath := "../pkg/audio_processing/tmp/subtitles/wholeWordTimestamps.srt"
+	outputPath := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/tmp/subtitles/wholeWordTimestamps.srt"
 
 	outputDir := filepath.Dir(outputPath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {

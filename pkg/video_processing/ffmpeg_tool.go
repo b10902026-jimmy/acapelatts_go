@@ -1,4 +1,4 @@
-package audio_processing
+package video_processing
 
 import (
 	"bytes"
@@ -17,7 +17,7 @@ type VideoMetadata struct {
 	// 添加其他所需的欄位
 }
 
-func ExecFFMPEG(args ...string) error {
+func execFFMPEG(args ...string) error {
 	cmd := exec.Command("ffmpeg", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {

@@ -9,7 +9,7 @@ import (
 
 func saveAudioToFile(content []byte, filename string) error {
 	// 拼接檔案路径
-	dirPath := "../pkg/audio_processing/tmp/audio"
+	dirPath := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/tmp/audio"
 	filePath := path.Join(dirPath, filename)
 
 	// 確認路徑存在，如果不存在則建立資料夾

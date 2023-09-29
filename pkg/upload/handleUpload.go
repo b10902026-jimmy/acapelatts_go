@@ -22,7 +22,7 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 	}
 
 	uniqueFileName := fmt.Sprintf("video_%d.mp4", time.Now().UnixNano())
-	tempFilePath := filepath.Join("..", "pkg", "audio_processing", "tmp", "uploaded", uniqueFileName)
+	tempFilePath := filepath.Join("/home/user/videoUploadAndProcessing_go", "pkg", "video_processing", "tmp", "uploaded", uniqueFileName)
 
 	// Ensure the directory exists
 	dir := filepath.Dir(tempFilePath)
