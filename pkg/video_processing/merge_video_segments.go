@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 )
 
 // MergeVideoAndAudio merges a video and an audio file using ffmpeg and outputs to a specified file.
@@ -75,6 +76,29 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 	}
 
 	// 處理合併段（segments）的代碼可以放在這裡
+	finalVideoDir := "../pkg/audio_processing/test_files"
 
-	return "成功路徑", nil // 這裡返回合併後的視頻路徑
+	// Ensure directory exists
+	if _, err := os.Stat(finalVideoDir); os.IsNotExist(err) {
+		err = os.MkdirAll(finalVideoDir, 0755) // 0755 is a common permission for directories
+		if err != nil {
+			log.Printf("Failed to create directory: %v", err)
+			return "", fmt.Errorf("failed to create directory: %v", err)
+		}
+	}
+
+	outputVideo := path.Join(finalVideoDir, "final_output.mp4")
+
+	err = execFFMPEG("-y", "-f", "concat", "-safe", "0", "-i", listFile, "-c", "copy", outputVideo)
+	if err != nil {
+		log.Printf("Failed to merge video segments: %v", err)
+		return "", fmt.Errorf("failed to merge video segments: %v", err)
+	}
+
+	err = os.Remove(listFile)
+	if err != nil {
+		log.Printf("warning: failed to remove list file: %v", err)
+	}
+
+	return outputVideo, nil
 }
