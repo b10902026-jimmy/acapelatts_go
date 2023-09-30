@@ -57,6 +57,8 @@ func MergeVideoAndAudioBySegments(videoPath string, audioPath string, outputPath
 }
 
 func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
+	//Write all filepath into filelist.txt
+
 	listFile := "filelist.txt"
 	f, err := os.Create(listFile)
 	if err != nil {
@@ -75,8 +77,8 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 		}
 	}
 
-	// 處理合併段（segments）的代碼可以放在這裡
-	finalVideoDir := "../pkg/audio_processing/test_files"
+	//Merge all segments into final output and store at /pkg/video_processing/test_files
+	finalVideoDir := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/test_files"
 
 	// Ensure directory exists
 	if _, err := os.Stat(finalVideoDir); os.IsNotExist(err) {
@@ -89,6 +91,7 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 
 	outputVideo := path.Join(finalVideoDir, "final_output.mp4")
 
+	//Run FFmpeg "concat" to merge all segments together
 	err = execFFMPEG("-y", "-f", "concat", "-safe", "0", "-i", listFile, "-c", "copy", outputVideo)
 	if err != nil {
 		log.Printf("Failed to merge video segments: %v", err)
