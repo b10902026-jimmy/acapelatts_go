@@ -77,8 +77,8 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 		}
 	}
 
-	//Merge all segments into final output and store at /pkg/video_processing/test_files
-	finalVideoDir := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/test_files"
+	//Merge all segments into final output and store at /pkg/video_processing/final_output
+	finalVideoDir := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/final_output"
 
 	// Ensure directory exists
 	if _, err := os.Stat(finalVideoDir); os.IsNotExist(err) {
