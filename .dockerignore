@@ -1,0 +1,10 @@
+#tempFile and output
+final_output/
+tmp/
+
+# 忽略版本控制目錄
+.git/
+.gitignore
+
+# 忽略 README 文件
+README.md
