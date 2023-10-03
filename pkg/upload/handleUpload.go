@@ -1,13 +1,17 @@
 package upload
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"time"
+	// 其他import
 )
+
+type VideoPathRequest struct {
+	VideoPathToBeProcessed string `json:"video_path_to_be_processed"`
+}
 
 func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 	if r.Method != http.MethodPost {
@@ -15,35 +19,19 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		return
 	}
 
-	file, _, err := r.FormFile("video_file")
+	// 解析JSON請求
+	decoder := json.NewDecoder(r.Body)
+	var videoPathReq VideoPathRequest
+	err := decoder.Decode(&videoPathReq)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error getting file: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("error decoding JSON: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	uniqueFileName := fmt.Sprintf("video_%d.mp4", time.Now().UnixNano())
-	tempFilePath := filepath.Join("/home/user/videoUploadAndProcessing_go", "pkg", "video_processing", "tmp", "uploaded", uniqueFileName)
+	// 現在，videoPathReq.VideoPathToBeProcessed 包含影片的路徑
+	FilePath := videoPathReq.VideoPathToBeProcessed
 
-	// Ensure the directory exists
-	dir := filepath.Dir(tempFilePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		http.Error(w, fmt.Sprintf("error creating directories: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	tempFile, err := os.Create(tempFilePath)
-	if err != nil {
-		file.Close() // Close the file from the request to release resources
-		http.Error(w, fmt.Sprintf("error creating temp file: %v", err), http.StatusInternalServerError)
-		return
-	}
-	defer tempFile.Close()
-
-	_, err = io.Copy(tempFile, file)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error saving file: %v", err), http.StatusInternalServerError)
-		return
-	}
+	log.Printf("FilePath: %s", FilePath)
 
 	apiKey := os.Getenv("WHISPER_API_KEY")
 	if apiKey == "" {
@@ -54,12 +42,12 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 	// 創建一個通道來接收工作完成的通知
 	done := make(chan bool)
 
-	worker.JobQueue <- Job{File: tempFile, FilePath: tempFilePath, APIKey: apiKey, Done: done}
+	worker.JobQueue <- Job{File: nil, FilePath: FilePath, APIKey: apiKey, Done: done} // File為nil，因為現在使用路徑
 
 	// 啟動一個協程來等待工作完成並執行清理操作
 	go func() {
-		<-done                  // 等待工作完成的通知
-		os.Remove(tempFilePath) // 刪除原始影片文件
+		<-done
+		// 其他清理操作
 	}()
 
 	w.WriteHeader(http.StatusOK)

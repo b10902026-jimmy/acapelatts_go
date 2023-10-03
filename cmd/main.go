@@ -21,14 +21,14 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/new_uploaded", func(w http.ResponseWriter, r *http.Request) {
 		upload.HandleUpload(w, r, workers[0]) // 此處將第一個工作人員傳遞給處理函式。實際上，由於所有工作人員共享同一個工作佇列，所以傳遞任何一個工作人員都可以。
 	})
 
 	// 使用LoggingMiddleware包裝您的路由
 	http.Handle("/", log.LoggingMiddleware(mux))
 
-	port := "30016"
+	port := "30017"
 	fmt.Printf("Starting server on port %s\n", port)
 	err := http.ListenAndServe(":"+port, nil)
 	if err != nil {

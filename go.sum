@@ -1,2 +1,3 @@
 github.com/1lann/dissonance v0.0.0-20230112204638-b3bab2c29061 h1:7d5fT7Eu2sdUj5xeBVak8xvX521CdFAMJmo0O5dZ+ug=
 github.com/1lann/dissonance v0.0.0-20230112204638-b3bab2c29061/go.mod h1:0oqsU4YTzbwStgbFvJTWstbmjp7li+uNcYvDIR16PAk=
+github.com/gordonklaus/portaudio v0.0.0-20221027163845-7c3b689db3cc/go.mod h1:WY8R6YKlI2ZI3UyzFk7P6yGSuS+hFwNtEzrexRyD7Es=

@@ -57,7 +57,9 @@ func getBackoffDuration(retryCount int) time.Duration {
 }
 
 func ProcessJob(job Job) error {
-	defer job.File.Close()
+	if job.File != nil {
+		defer job.File.Close()
+	}
 
 	log.Println("Processing vedio..") // 添加信息
 
@@ -148,8 +150,6 @@ func ProcessJob(job Job) error {
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)
 	}
 	log.Printf("Successfully merged all video segments into %s", outputVideo)
-
-	job.File.Close()
 
 	// 工作完成，發送通知
 	job.Done <- true
