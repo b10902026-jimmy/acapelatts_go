@@ -15,7 +15,7 @@ type VideoSegment struct {
 func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRTSegment, videoDuration float64) ([]string, []string, error) {
 	var allSegmentPaths []string
 	var voiceSegmentPaths []string
-	const outputDir = "/home/user/videoUploadAndProcessing_go/pkg/video_processing/tmp/video/"
+	const outputDir = "../pkg/video_processing/tmp/video/"
 
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)

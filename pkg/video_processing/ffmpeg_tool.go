@@ -3,7 +3,9 @@ package video_processing
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"strconv"
 	"strings"
@@ -34,17 +36,37 @@ func GetVideoMetadata(filePath string) (VideoMetadata, error) {
 		"-show_streams",
 		filePath)
 
+	cmd.Stderr = os.Stderr // Redirect stderr to the main process stderr
+
 	output, err := cmd.Output()
 	if err != nil {
+		fmt.Println("Error executing ffprobe command:", err)
 		return VideoMetadata{}, err
 	}
 
 	var result map[string]interface{}
-	json.Unmarshal(output, &result)
+	if err := json.Unmarshal(output, &result); err != nil {
+		fmt.Println("Error unmarshaling ffprobe output:", err)
+		return VideoMetadata{}, err
+	}
 
-	streams := result["streams"].([]interface{})
-	videoStream := streams[0].(map[string]interface{})
-	audioStream := streams[1].(map[string]interface{})
+	streams, ok := result["streams"].([]interface{})
+	if !ok {
+		fmt.Println("Error: 'streams' field missing or has wrong type")
+		return VideoMetadata{}, errors.New("missing or wrong type 'streams' field")
+	}
+
+	videoStream, ok := streams[0].(map[string]interface{})
+	if !ok {
+		fmt.Println("Error: first stream entry missing or has wrong type")
+		return VideoMetadata{}, errors.New("missing or wrong type for first stream entry")
+	}
+
+	audioStream, ok := streams[1].(map[string]interface{})
+	if !ok {
+		fmt.Println("Error: second stream entry missing or has wrong type")
+		return VideoMetadata{}, errors.New("missing or wrong type for second stream entry")
+	}
 
 	metadata := VideoMetadata{
 		BitRate:         videoStream["bit_rate"].(string),
@@ -52,6 +74,7 @@ func GetVideoMetadata(filePath string) (VideoMetadata, error) {
 		AudioSampleRate: audioStream["sample_rate"].(string),
 		AudioChannels:   int(audioStream["channels"].(float64)),
 	}
+
 	return metadata, nil
 }
 
