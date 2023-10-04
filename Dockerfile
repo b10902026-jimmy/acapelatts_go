@@ -27,3 +27,6 @@ COPY --from=builder /video-processing /video-processing
 
 # 運行app
 CMD ["/video-processing"]
+
+
+#container啟動指令:docker run -v /home/shared/videos:../pkg/video_processing/final_videos -p 30016:30016 --name video-processor-go --env-file .env video-processing:1.0 
