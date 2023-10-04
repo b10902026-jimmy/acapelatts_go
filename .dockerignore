@@ -8,3 +8,6 @@ tmp/
 
 # 忽略 README 文件
 README.md
+
+# 忽略.env
+.env
