@@ -15,11 +15,13 @@ const InitialBackoffDuration = 500 * time.Millisecond // 初始回退時間
 const MaxBackoffDuration = 16 * time.Second           // 最大回退時間
 
 type Job struct {
-	File     io.ReadCloser
-	FilePath string
-	APIKey   string
-	Retries  int
-	Done     chan bool // 用來通知工作完成
+	File                  io.ReadCloser
+	FileName              string
+	UnprocessedFilePath   string
+	ProcessedFilePathChan chan string // 用來傳送處理後的文件路徑
+	APIKey                string
+	Retries               int
+	Done                  chan bool // 用來通知工作完成
 }
 
 type Worker struct {
@@ -32,6 +34,7 @@ func (w Worker) Start() {
 		for job := range w.JobQueue {
 			log.Printf("Worker %d processing job", w.ID)
 			err := ProcessJob(job)
+			log.Printf("worker%d job done", w.ID)
 			if err != nil {
 				if job.Retries < 2 { // 如果尚未達到最大重試次數
 					job.Retries++
@@ -43,6 +46,7 @@ func (w Worker) Start() {
 					log.Printf("Job failed after %d retries", job.Retries)
 				}
 			}
+
 		}
 	}()
 }
@@ -64,7 +68,7 @@ func ProcessJob(job Job) error {
 	log.Println("Processing vedio..") // 添加信息
 
 	// 獲取影片的metadata
-	metadata, err := video_processing.GetVideoMetadata(job.FilePath)
+	metadata, err := video_processing.GetVideoMetadata(job.UnprocessedFilePath)
 	if err != nil {
 		log.Printf("Failed to get video metadata: %v", err)
 		return fmt.Errorf("failed to get video metadata: %v", err)
@@ -74,7 +78,7 @@ func ProcessJob(job Job) error {
 	log.Println("Extracting aduio from video streamly")
 
 	// 使用新打開的file讀取器提取音訊(流式)
-	audioReader, err := video_processing.StreamedExtractAudioFromVideo(job.FilePath)
+	audioReader, err := video_processing.StreamedExtractAudioFromVideo(job.UnprocessedFilePath)
 	if err != nil {
 		log.Printf("Error extracting audio: %v", err)
 
@@ -117,14 +121,14 @@ func ProcessJob(job Job) error {
 	log.Println("Spliting video into segments...")
 
 	//獲取影片時長
-	videoDuration, err := video_processing.GetVideoDuration(job.FilePath)
+	videoDuration, err := video_processing.GetVideoDuration(job.UnprocessedFilePath)
 	if err != nil {
 		log.Printf("Failed to get video duration: %v", err)
 		return fmt.Errorf("failed to get video duration: %v", err)
 	}
 
 	// Splitting video into segments and preparing for parallel processing
-	allSegmentPaths, voiceSegmentPaths, err := video_processing.SplitVideoIntoSegmentsBySRT(job.FilePath, srtSegments, videoDuration)
+	allSegmentPaths, voiceSegmentPaths, err := video_processing.SplitVideoIntoSegmentsBySRT(job.UnprocessedFilePath, srtSegments, videoDuration)
 	if err != nil {
 		log.Printf("Failed to split video into segments: %v", err)
 		return fmt.Errorf("failed to split video into segments: %v", err)
@@ -144,14 +148,29 @@ func ProcessJob(job Job) error {
 	allSegmentPaths = mergedSegments
 
 	log.Println("Starting to merge all the video segments..")
-	outputVideo, err := video_processing.MergeAllVideoSegmentsTogether(allSegmentPaths)
+	outputVideo, err := video_processing.MergeAllVideoSegmentsTogether(job.FileName, allSegmentPaths)
 	if err != nil {
 		log.Printf("Failed to merge video segments into final_video: %v", err)
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)
+	} else {
+		log.Printf("Successfully merged all video segments into %s", outputVideo)
 	}
-	log.Printf("Successfully merged all video segments into %s", outputVideo)
 
-	// 工作完成，發送通知
-	job.Done <- true
+	// 當工作完成後
+
+	select {
+	case job.Done <- true:
+		log.Println("Successfully sent true to Done channel")
+	case <-time.After(time.Second * 5): // 等待5秒
+		log.Println("Timeout while trying to send true to Done channel")
+	}
+
+	select {
+	case job.ProcessedFilePathChan <- outputVideo:
+		log.Println("Successfully sent outputVideo to ProcessedFilePathChannel")
+	case <-time.After(time.Second * 5): // 等待5秒
+		log.Println("Timeout while trying to send outputVideo to ProcessedFilePathChannel")
+	}
+
 	return nil
 }

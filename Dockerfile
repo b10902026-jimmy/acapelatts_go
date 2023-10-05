@@ -27,3 +27,6 @@ COPY --from=builder /video-processing /video-processing
 
 # 運行app
 CMD ["/video-processing"]
+
+
+
