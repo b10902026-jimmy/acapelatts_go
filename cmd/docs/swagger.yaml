@@ -1,0 +1,57 @@
+swagger: "2.0"
+info:
+  version: "1.0"
+  title: "Video Upload and Processing API"
+  description: "This is a sample API for video upload and processing."
+host: "localhost:30016"
+basePath: "/"
+schemes:
+  - "http"
+
+paths:
+  /new_uploaded:
+    post:
+      summary: "Upload a new video for processing"
+      description: "Uploads a video and triggers its processing."
+      tags:
+        - "video"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - name: "request"
+          in: "body"
+          description: "Video upload payload"
+          required: true
+          schema:
+            $ref: "#/definitions/VideoPathRequest"
+      responses:
+        200:
+          description: "Successfully uploaded"
+          schema:
+            $ref: "#/definitions/VideoPathRequest"
+        400:
+          description: "Bad Request"
+          schema:
+            type: "string"
+        405:
+          description: "Method Not Allowed"
+          schema:
+            type: "string"
+
+definitions:
+  VideoPathRequest:
+    type: "object"
+    required:
+      - "video_path_to_be_processed"
+      - "callback_url"
+    properties:
+      video_path_to_be_processed:
+        type: "string"
+        example: "/path/to/video"
+        description: "Path to the video to be processed"
+      callback_url:
+        type: "string"
+        example: "http://callback.url"
+        description: "Callback URL for job status"

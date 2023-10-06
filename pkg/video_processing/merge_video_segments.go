@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 )
 
 // MergeVideoAndAudio merges a video and an audio file using ffmpeg and outputs to a specified file.
@@ -56,7 +57,7 @@ func MergeVideoAndAudioBySegments(videoPath string, audioPath string, outputPath
 	return nil
 }
 
-func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
+func MergeAllVideoSegmentsTogether(fileName string, segmentPaths []string) (string, error) {
 	//Write all filepath into filelist.txt
 
 	listFile := "filelist.txt"
@@ -78,18 +79,18 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 	}
 
 	//Merge all segments into final output and store at /pkg/video_processing/final_output
-	finalVideoDir := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/final_output"
+	finalVideoDir := "/home/shared/processed_videos"
 
-	// Ensure directory exists
-	if _, err := os.Stat(finalVideoDir); os.IsNotExist(err) {
-		err = os.MkdirAll(finalVideoDir, 0755) // 0755 is a common permission for directories
-		if err != nil {
-			log.Printf("Failed to create directory: %v", err)
-			return "", fmt.Errorf("failed to create directory: %v", err)
-		}
-	}
+	// 去掉 fileName 的 ".mp4" 後綴
+	fileNameWithoutExt := strings.TrimSuffix(fileName, ".mp4")
 
-	outputVideo := path.Join(finalVideoDir, "final_output.mp4")
+	// 生成帶有 '_processed' 後綴的新名稱輸出檔名
+	outputVideoName := fmt.Sprintf("%s_processed.mp4", fileNameWithoutExt)
+
+	// 將新名稱用於最終輸出視頻的路徑
+	outputVideo := path.Join(finalVideoDir, outputVideoName)
+
+	log.Println("Running ffmpeg command to concat all segments from list file...")
 
 	//Run FFmpeg "concat" to merge all segments together
 	err = execFFMPEG("-y", "-f", "concat", "-safe", "0", "-i", listFile, "-c", "copy", outputVideo)
@@ -98,10 +99,13 @@ func MergeAllVideoSegmentsTogether(segmentPaths []string) (string, error) {
 		return "", fmt.Errorf("failed to merge video segments: %v", err)
 	}
 
+	log.Println("Successfully concat all segments from list file...")
+
 	err = os.Remove(listFile)
 	if err != nil {
 		log.Printf("warning: failed to remove list file: %v", err)
 	}
 
+	log.Println("All tempfile has been removed")
 	return outputVideo, nil
 }
