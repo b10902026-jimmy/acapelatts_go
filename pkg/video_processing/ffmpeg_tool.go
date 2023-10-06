@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strconv"
@@ -40,31 +41,31 @@ func GetVideoMetadata(filePath string) (VideoMetadata, error) {
 
 	output, err := cmd.Output()
 	if err != nil {
-		fmt.Println("Error executing ffprobe command:", err)
+		log.Println("Error executing ffprobe command:", err)
 		return VideoMetadata{}, err
 	}
 
 	var result map[string]interface{}
 	if err := json.Unmarshal(output, &result); err != nil {
-		fmt.Println("Error unmarshaling ffprobe output:", err)
+		log.Println("Error unmarshaling ffprobe output:", err)
 		return VideoMetadata{}, err
 	}
 
 	streams, ok := result["streams"].([]interface{})
 	if !ok {
-		fmt.Println("Error: 'streams' field missing or has wrong type")
+		log.Println("Error: 'streams' field missing or has wrong type")
 		return VideoMetadata{}, errors.New("missing or wrong type 'streams' field")
 	}
 
 	videoStream, ok := streams[0].(map[string]interface{})
 	if !ok {
-		fmt.Println("Error: first stream entry missing or has wrong type")
+		log.Println("Error: first stream entry missing or has wrong type")
 		return VideoMetadata{}, errors.New("missing or wrong type for first stream entry")
 	}
 
 	audioStream, ok := streams[1].(map[string]interface{})
 	if !ok {
-		fmt.Println("Error: second stream entry missing or has wrong type")
+		log.Println("Error: second stream entry missing or has wrong type")
 		return VideoMetadata{}, errors.New("missing or wrong type for second stream entry")
 	}
 
