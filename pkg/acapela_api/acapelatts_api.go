@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"path"
 )
 
@@ -23,10 +24,19 @@ func CallAcapelaAPI(text string, voice string) (AcapelaResponse, error) {
 	loginURL := "https://www.acapela-cloud.com/api/login/"
 	apiEndpoint := "https://www.acapela-cloud.com/api/command/"
 
+	// 讀取環境變數
+	email := os.Getenv("ACAPELA_EMAIL")
+	password := os.Getenv("ACAPELA_PASSWORD")
+
+	// 如果環境變數未設置，返回錯誤
+	if email == "" || password == "" {
+		return AcapelaResponse{}, fmt.Errorf("error: Missing email or password environment variable")
+	}
+
 	// Define the login credentials
 	credentials := map[string]string{
-		"email":    "cathyhaien@hotmail.com",
-		"password": "jHFXuBxqZNBJTl",
+		"email":    email,
+		"password": password,
 	}
 
 	// Marshal the credentials into JSON
@@ -123,7 +133,7 @@ func ConvertTextToSpeechUsingAcapela(text string, voice string, segmentIndex int
 
 	// 將返回的內容保存為mp3文件，使用segmentIndex生成唯一的檔名
 	tempFileName := fmt.Sprintf("acapela_audio_segment_%d.mp3", segmentIndex)
-	tempFilePath := path.Join("/home/user/videoUploadAndProcessing_go/pkg/video_processing/tmp/audio", tempFileName)
+	tempFilePath := path.Join("../pkg/video_processing/tmp/audio", tempFileName)
 	err = saveAudioToFile(acapelaResp.Content, tempFileName) // 注意这里只需要传文件名
 	if err != nil {
 		log.Printf("Failed to save audio to file: %v", err)

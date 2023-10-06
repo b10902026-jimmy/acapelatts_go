@@ -1,0 +1,12 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "This is a sample API for video upload and processing.",
+        "title": "Video Upload and Processing API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:30016",
+    "basePath": "/",
+    "paths": {}
+}

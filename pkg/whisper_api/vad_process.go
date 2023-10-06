@@ -49,7 +49,7 @@ func ProcessVADForSTT(audioReader io.Reader) (io.Reader, error) {
 	filteredStream := vadFilter.Filter(audioStream)
 
 	// 確保目錄存在
-	outputDir := "/home/user/videoUploadAndProcessing_go/pkg/video_processing/tmp/audio/filtered_by_vad"
+	outputDir := "../pkg/video_processing/tmp/audio/filtered_by_vad"
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		log.Println("Failed to create output directory:", err)
 		return nil, err

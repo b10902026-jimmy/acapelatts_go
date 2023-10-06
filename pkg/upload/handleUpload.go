@@ -1,66 +1,108 @@
 package upload
 
 import (
+	"encoding/json"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
-	"time"
+	"strings"
 )
 
+// @Schema
+// description: Video path request payload
+// required: true
+type VideoPathRequest struct {
+	// @Field example:/path/to/video description:"Path to the video to be processed"
+	VideoPathToBeProcessed string `json:"video_path_to_be_processed"`
+	// @Field example:http://callback.url description:"Callback URL for job status"
+	CallbackURL string `json:"callback_url"`
+}
+
+// @Summary Upload a new video for processing
+// @Description Uploads a video and triggers its processing.
+// @Tags video
+// @Accept json
+// @Produce json
+// @Param request body VideoPathRequest true "Video upload payload"
+// @Success 200 {object} VideoPathRequest "Successfully uploaded"
+// @Failure 400 {object} string "Bad Request"
+// @Failure 405 {object} string "Method Not Allowed"
+// @Router /new_uploaded [post]
+
+// HandleUpload is the HTTP handler for video uploads
 func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
+	// Check if the HTTP method is POST
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	file, _, err := r.FormFile("video_file")
+	// Decode the JSON payload from the incoming request
+	decoder := json.NewDecoder(r.Body)
+	var videoPathReq VideoPathRequest
+	err := decoder.Decode(&videoPathReq)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("error getting file: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("error decoding JSON: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	uniqueFileName := fmt.Sprintf("video_%d.mp4", time.Now().UnixNano())
-	tempFilePath := filepath.Join("/home/user/videoUploadAndProcessing_go", "pkg", "video_processing", "tmp", "uploaded", uniqueFileName)
+	// Extract the path of the unprocessed video file from the request payload
+	unprocessedfilePath := videoPathReq.VideoPathToBeProcessed
 
-	// Ensure the directory exists
-	dir := filepath.Dir(tempFilePath)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		http.Error(w, fmt.Sprintf("error creating directories: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// Extract the file name from the unprocessed file path
+	fileName := filepath.Base(unprocessedfilePath)
 
-	tempFile, err := os.Create(tempFilePath)
-	if err != nil {
-		file.Close() // Close the file from the request to release resources
-		http.Error(w, fmt.Sprintf("error creating temp file: %v", err), http.StatusInternalServerError)
-		return
-	}
-	defer tempFile.Close()
+	// Log details for debugging
+	log.Printf("FilePath: %s", unprocessedfilePath)
+	log.Printf("FileName: %s", fileName)
 
-	_, err = io.Copy(tempFile, file)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("error saving file: %v", err), http.StatusInternalServerError)
-		return
-	}
-
+	// Retrieve API key from environment variables
 	apiKey := os.Getenv("WHISPER_API_KEY")
 	if apiKey == "" {
 		http.Error(w, "WHISPER_API_KEY environment variable not set", http.StatusBadRequest)
 		return
 	}
 
-	// 創建一個通道來接收工作完成的通知
+	// Create a channel to receive a completion signal from the worker
 	done := make(chan bool)
 
-	worker.JobQueue <- Job{File: tempFile, FilePath: tempFilePath, APIKey: apiKey, Done: done}
+	// Create a channel to receive the processed file path from the worker
+	processedFilePathChan := make(chan string)
 
-	// 啟動一個協程來等待工作完成並執行清理操作
+	// Send a job to the worker's job queue
+	worker.JobQueue <- Job{
+		File:                  nil,
+		FileName:              fileName,
+		UnprocessedFilePath:   unprocessedfilePath,
+		ProcessedFilePathChan: processedFilePathChan,
+		APIKey:                apiKey,
+		Done:                  done,
+	}
+
+	// Launch a goroutine to wait for job completion and execute cleanup operations
 	go func() {
-		<-done                  // 等待工作完成的通知
-		os.Remove(tempFilePath) // 刪除原始影片文件
+		log.Printf("Go routine started waiting for data from worker channel")
+		<-done                                       // Wait until the worker signals that the job is done
+		processedFilePath := <-processedFilePathChan // Get the processed file path from the channel
+
+		// Build and log the payload for the callback
+		payload := fmt.Sprintf(`{"status":"done", "new_path": "%s"}`, processedFilePath)
+		log.Printf("Payload to be sent: %s", payload)
+
+		// Send the payload to the callback URL
+		resp, err := http.Post(videoPathReq.CallbackURL, "application/json", strings.NewReader(payload))
+		if err != nil {
+			log.Printf("Failed to send callback: %v", err)
+			return
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			log.Printf("Received non-OK status code from callback: %d", resp.StatusCode)
+		}
 	}()
 
+	// Send an HTTP OK status to indicate successful initiation
 	w.WriteHeader(http.StatusOK)
 }
