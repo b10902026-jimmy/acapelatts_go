@@ -2,6 +2,7 @@ package video_processing
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"strings"
 	"videoUploadAndProcessing/pkg/whisper_api"
@@ -57,7 +58,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 		gapAndEndSegmentInfo = append(gapAndEndSegmentInfo, VideoSegment{Path: endOutputFile, Duration: endDuration})
 	}
 	// 打印 allSegmentPaths 中的總片段數
-	fmt.Printf("Total number of segments in allSegmentPaths: %d\n", len(allSegmentPaths))
+	log.Printf("Total number of segments in allSegmentPaths: %d\n", len(allSegmentPaths))
 
 	segmentTimesStr := ""
 	for i, t := range segmentTimes {
@@ -67,8 +68,8 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 		segmentTimesStr += fmt.Sprintf("%f", t)
 	}
 
-	fmt.Println("Segment Times: ", segmentTimes)
-	fmt.Println("Segment TimesSTR: ", segmentTimesStr)
+	log.Println("Segment Times: ", segmentTimes)
+	log.Println("Segment TimesSTR: ", segmentTimesStr)
 
 	err := execFFMPEG("-i", videoPath,
 		"-c:v", "libx264",
@@ -96,7 +97,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 		}
 	}
 
-	fmt.Printf("Total number of segments splited by ffmpeg command: %d\n", segmentCount)
+	log.Printf("Total number of segments splited by ffmpeg command: %d\n", segmentCount)
 
 	for i, expectedPath := range allSegmentPaths {
 		actualPath := outputDir + fmt.Sprintf("segment%d.mp4", i)

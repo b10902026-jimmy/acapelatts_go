@@ -3,7 +3,7 @@ info:
   version: "1.0"
   title: "Video Upload and Processing API"
   description: "This is a sample API for video upload and processing."
-host: "localhost:30016"
+host: "34.80.125.169:30016"
 basePath: "/"
 schemes:
   - "http"
@@ -12,7 +12,7 @@ paths:
   /new_uploaded:
     post:
       summary: "Upload a new video for processing"
-      description: "Uploads a video and triggers its processing."
+      description: "Uploads a video and triggers its processing. The video_path_to_be_processed should start with '/home/shared/unprocessed_videos'."
       tags:
         - "video"
       consumes:
@@ -32,7 +32,7 @@ paths:
           schema:
             $ref: "#/definitions/VideoPathRequest"
         400:
-          description: "Bad Request"
+          description: "Bad Request. Ensure the video_path_to_be_processed starts with '/home/shared/unprocessed_videos'."
           schema:
             type: "string"
         405:
@@ -49,8 +49,8 @@ definitions:
     properties:
       video_path_to_be_processed:
         type: "string"
-        example: "/path/to/video"
-        description: "Path to the video to be processed"
+        example: "/home/shared/unprocessed_videos/path/to/video"
+        description: "Path to the video to be processed. Should start with '/home/shared/unprocessed_videos'."
       callback_url:
         type: "string"
         example: "http://callback.url"

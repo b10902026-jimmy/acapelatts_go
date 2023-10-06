@@ -32,7 +32,7 @@ _testmain.go
 *.log
 
 # Environment files
-.env
+#.env
 
 # Executables
 *.exe

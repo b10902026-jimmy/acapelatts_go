@@ -48,6 +48,12 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		return
 	}
 
+	// Check if the path starts with the specified prefix
+	if !strings.HasPrefix(videoPathReq.VideoPathToBeProcessed, "/home/shared/unprocessed_videos") {
+		http.Error(w, "Invalid video path prefix", http.StatusBadRequest)
+		return
+	}
+
 	// Extract the path of the unprocessed video file from the request payload
 	unprocessedfilePath := videoPathReq.VideoPathToBeProcessed
 
@@ -88,7 +94,7 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		processedFilePath := <-processedFilePathChan // Get the processed file path from the channel
 
 		// Build and log the payload for the callback
-		payload := fmt.Sprintf(`{"status":"done", "new_path": "%s"}`, processedFilePath)
+		payload := fmt.Sprintf(`{"status":"done", "processed_video_path": "%s"}`, processedFilePath)
 		log.Printf("Payload to be sent: %s", payload)
 
 		// Send the payload to the callback URL
@@ -105,4 +111,11 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 
 	// Send an HTTP OK status to indicate successful initiation
 	w.WriteHeader(http.StatusOK)
+
+	// Add a response message
+	responseMessage := "Processing video at the specified path, please wait for callback."
+	_, err = w.Write([]byte(responseMessage))
+	if err != nil {
+		log.Printf("Failed to write response: %v", err)
+	}
 }

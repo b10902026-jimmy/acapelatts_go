@@ -1,13 +1,26 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
-	"videoUploadAndProcessing/pkg/log"
+	"os"
 	"videoUploadAndProcessing/pkg/upload"
 )
 
 func main() {
+
+	logfilepath := os.Getenv("VIDEO_PROCESSING_LOG_PATH")
+
+	// 打開或創建一個名為 "example.log" 的檔案
+	logFile, err := os.OpenFile(logfilepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("Failed to open or create log file: %v\n", err)
+	}
+	defer logFile.Close()
+
+	// 將 log 的輸出定向到 file
+	log.SetOutput(logFile)
+
 	// Create a new job queue with 100 slots.
 	jobQueue := make(chan upload.Job, 100)
 
@@ -33,16 +46,13 @@ func main() {
 		upload.HandleUpload(w, r, workers[0])
 	})
 
-	// Wrap the mux with logging middleware.
-	http.Handle("/", log.LoggingMiddleware(mux))
-
 	// Define the port for the server.
-	port := "30017"
-	fmt.Printf("Starting server on port %s\n", port)
+	port := os.Getenv("VIDEO_PROCESSING_PORT")
+	log.Printf("Starting server on port %s\n", port)
 
 	// Start the HTTP server.
-	err := http.ListenAndServe(":"+port, nil)
+	err = http.ListenAndServe(":"+port, mux)
 	if err != nil {
-		fmt.Printf("Error starting server: %v\n", err)
+		log.Fatalf("Error starting server: %v\n", err)
 	}
 }

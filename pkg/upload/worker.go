@@ -34,7 +34,7 @@ func (w Worker) Start() {
 		for job := range w.JobQueue {
 			log.Printf("Worker %d processing job", w.ID)
 			err := ProcessJob(job)
-			log.Printf("worker%d job done", w.ID)
+
 			if err != nil {
 				if job.Retries < 2 { // 如果尚未達到最大重試次數
 					job.Retries++
@@ -45,6 +45,8 @@ func (w Worker) Start() {
 				} else {
 					log.Printf("Job failed after %d retries", job.Retries)
 				}
+			} else {
+				log.Printf("worker%d job done", w.ID)
 			}
 
 		}
@@ -105,10 +107,9 @@ func ProcessJob(job Job) error {
 	//創建所有單詞的時間戳
 	outputPath, err := whisper_api.CreateWholeWordTimestampsFile(whisperAndWordTimestamps)
 	if err != nil {
-
-		fmt.Printf("Error creating wholeWordTimestamps file: %v\n", err)
+		log.Printf("Error creating wholeWordTimestamps file: %v\n", err)
 	} else {
-		fmt.Printf("Created wholeWordTimestamps file at: %s\n", outputPath)
+		log.Printf("Created wholeWordTimestamps file at: %s\n", outputPath)
 	}
 
 	// 讀取SRT文件
