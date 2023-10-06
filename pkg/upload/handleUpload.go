@@ -8,21 +8,38 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	// 其他import
 )
 
+// @Schema
+// description: Video path request payload
+// required: true
 type VideoPathRequest struct {
+	// @Field example:/path/to/video description:"Path to the video to be processed"
 	VideoPathToBeProcessed string `json:"video_path_to_be_processed"`
-	CallbackURL            string `json:"callback_url"`
+	// @Field example:http://callback.url description:"Callback URL for job status"
+	CallbackURL string `json:"callback_url"`
 }
 
+// @Summary Upload a new video for processing
+// @Description Uploads a video and triggers its processing.
+// @Tags video
+// @Accept json
+// @Produce json
+// @Param request body VideoPathRequest true "Video upload payload"
+// @Success 200 {object} VideoPathRequest "Successfully uploaded"
+// @Failure 400 {object} string "Bad Request"
+// @Failure 405 {object} string "Method Not Allowed"
+// @Router /new_uploaded [post]
+
+// HandleUpload is the HTTP handler for video uploads
 func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
+	// Check if the HTTP method is POST
 	if r.Method != http.MethodPost {
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 
-	// 解析JSON請求
+	// Decode the JSON payload from the incoming request
 	decoder := json.NewDecoder(r.Body)
 	var videoPathReq VideoPathRequest
 	err := decoder.Decode(&videoPathReq)
@@ -31,46 +48,50 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		return
 	}
 
-	// 現在，videoPathReq.VideoPathToBeProcessed 包含影片的路徑
+	// Extract the path of the unprocessed video file from the request payload
 	unprocessedfilePath := videoPathReq.VideoPathToBeProcessed
 
+	// Extract the file name from the unprocessed file path
 	fileName := filepath.Base(unprocessedfilePath)
 
+	// Log details for debugging
 	log.Printf("FilePath: %s", unprocessedfilePath)
 	log.Printf("FileName: %s", fileName)
 
+	// Retrieve API key from environment variables
 	apiKey := os.Getenv("WHISPER_API_KEY")
 	if apiKey == "" {
 		http.Error(w, "WHISPER_API_KEY environment variable not set", http.StatusBadRequest)
 		return
 	}
 
-	// 創建一個通道來接收工作完成的通知
+	// Create a channel to receive a completion signal from the worker
 	done := make(chan bool)
 
-	// 創建一個通道來接收處理後的文件路徑
+	// Create a channel to receive the processed file path from the worker
 	processedFilePathChan := make(chan string)
 
+	// Send a job to the worker's job queue
 	worker.JobQueue <- Job{
 		File:                  nil,
+		FileName:              fileName,
 		UnprocessedFilePath:   unprocessedfilePath,
-		ProcessedFilePathChan: processedFilePathChan, // 設置通道
+		ProcessedFilePathChan: processedFilePathChan,
 		APIKey:                apiKey,
 		Done:                  done,
-		FileName:              fileName,
 	}
 
-	// 啟動一個協程來等待工作完成並執行清理操作
+	// Launch a goroutine to wait for job completion and execute cleanup operations
 	go func() {
-		log.Printf("Go routine started waiting recieving data from worker channel")
-		<-done
-		processedFilePath := <-processedFilePathChan // 從通道中讀取處理後的文件路徑
+		log.Printf("Go routine started waiting for data from worker channel")
+		<-done                                       // Wait until the worker signals that the job is done
+		processedFilePath := <-processedFilePathChan // Get the processed file path from the channel
 
-		// 使用處理後的文件路徑作為回調中的 new_path
+		// Build and log the payload for the callback
 		payload := fmt.Sprintf(`{"status":"done", "new_path": "%s"}`, processedFilePath)
-		// 打印 payload 到終端機
 		log.Printf("Payload to be sent: %s", payload)
 
+		// Send the payload to the callback URL
 		resp, err := http.Post(videoPathReq.CallbackURL, "application/json", strings.NewReader(payload))
 		if err != nil {
 			log.Printf("Failed to send callback: %v", err)
@@ -80,8 +101,8 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		if resp.StatusCode != http.StatusOK {
 			log.Printf("Received non-OK status code from callback: %d", resp.StatusCode)
 		}
-
 	}()
 
+	// Send an HTTP OK status to indicate successful initiation
 	w.WriteHeader(http.StatusOK)
 }
