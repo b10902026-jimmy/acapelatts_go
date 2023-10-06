@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"path"
 )
 
@@ -23,10 +24,19 @@ func CallAcapelaAPI(text string, voice string) (AcapelaResponse, error) {
 	loginURL := "https://www.acapela-cloud.com/api/login/"
 	apiEndpoint := "https://www.acapela-cloud.com/api/command/"
 
+	// 讀取環境變數
+	email := os.Getenv("ACAPELA_EMAIL")
+	password := os.Getenv("ACAPELA_PASSWORD")
+
+	// 如果環境變數未設置，返回錯誤
+	if email == "" || password == "" {
+		return AcapelaResponse{}, fmt.Errorf("error: Missing email or password environment variable")
+	}
+
 	// Define the login credentials
 	credentials := map[string]string{
-		"email":    "cathyhaien@hotmail.com",
-		"password": "jHFXuBxqZNBJTl",
+		"email":    email,
+		"password": password,
 	}
 
 	// Marshal the credentials into JSON
