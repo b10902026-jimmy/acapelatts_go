@@ -48,8 +48,10 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		return
 	}
 
+	prefix := os.Getenv("UNPROCESSED_VIDEO_PATH")
+
 	// Check if the path starts with the specified prefix
-	if !strings.HasPrefix(videoPathReq.VideoPathToBeProcessed, "/home/shared/unprocessed_videos") {
+	if !strings.HasPrefix(videoPathReq.VideoPathToBeProcessed, prefix) {
 		http.Error(w, "Invalid video path prefix", http.StatusBadRequest)
 		return
 	}
