@@ -79,7 +79,7 @@ func MergeAllVideoSegmentsTogether(fileName string, segmentPaths []string) (stri
 	}
 
 	//Merge all segments into final output and store at /pkg/video_processing/final_output
-	finalVideoDir := "/home/shared/processed_videos"
+	finalVideoDir := os.Getenv("PROCESSED_VIDEO_PATH")
 
 	// 去掉 fileName 的 ".mp4" 後綴
 	fileNameWithoutExt := strings.TrimSuffix(fileName, ".mp4")
