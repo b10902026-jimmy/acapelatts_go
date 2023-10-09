@@ -40,7 +40,7 @@ func main() {
 	mux := http.NewServeMux()
 
 	// Register a new route that handles video uploads.
-	mux.HandleFunc("/new_uploaded", func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc("/video-processing-trigger", func(w http.ResponseWriter, r *http.Request) {
 		// Use the first worker to handle the upload.
 		// In reality, any worker could handle this since they all share the same job queue.
 		upload.HandleUpload(w, r, workers[0])
