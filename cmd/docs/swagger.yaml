@@ -1,7 +1,7 @@
 swagger: "2.0"
 info:
   version: "1.0"
-  title: "Video Upload and Processing API"
+  title: "Video Processing Trigger API"
   description: "This is a sample API for video upload and processing."
 host: "34.80.125.169:30016"
 basePath: "/"
@@ -12,7 +12,7 @@ paths:
   /new_uploaded:
     post:
       summary: "Upload a new video for processing"
-      description: "Uploads a video and triggers its processing. The video_path_to_be_processed should start with '/home/shared/unprocessed_videos'."
+      description: "Uploads a video and triggers its processing. The JSON string 'video_path_to_be_processed' should start with '/home/shared/unprocessed_videos'."
       tags:
         - "video"
       consumes:
