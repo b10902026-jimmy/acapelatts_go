@@ -1,5 +1,5 @@
 # 使用官方的 Golang image 作為基礎 image
-FROM golang:1.21.1 as builder
+FROM golang:latest as builder
 
 # 設定工作目錄
 WORKDIR /app
