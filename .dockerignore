@@ -11,3 +11,6 @@ README.md
 
 #忽略環境變數檔
 .env
+
+#忽略log檔案
+*.log
