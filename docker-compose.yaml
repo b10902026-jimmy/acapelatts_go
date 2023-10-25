@@ -1,0 +1,14 @@
+version: '3.1'
+
+services:
+  video-processor-go:
+    image: video-processor:latest
+    container_name: video-processor-go
+    ports:
+      - "30016:30016"
+    volumes:
+      - /home/shared/video_processing_log:/app/log
+      - /home/shared/unprocessed_videos:/home/shared/unprocessed_videos
+      - /home/shared/processed_videos:/home/shared/processed_videos
+    env_file:
+      - .env

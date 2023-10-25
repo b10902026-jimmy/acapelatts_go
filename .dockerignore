@@ -5,16 +5,16 @@ tmp/
 # 忽略版本控制目錄
 .git/
 .gitignore
+.github/
 
 # 忽略 README 文件
 README.md
 
 #忽略環境變數檔
-<<<<<<< HEAD
-.env
-=======
 .env
 
 #忽略log檔案
 *.log
->>>>>>> 418542ef5a7816c5bfeb61482dbd19f5e236a070
+
+#忽略docker-compose之yaml檔
+docker-compose.yaml

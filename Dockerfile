@@ -29,4 +29,5 @@ COPY --from=builder /video-processing /video-processing
 CMD ["/video-processing"]
 
 
+
 #container啟動指令:docker run --volume /home/shared/video_processing_log:/app/log --volume /home/shared/unprocessed_videos:/home/shared/unprocessed_videos --volume /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
