@@ -1,0 +1,3 @@
+1
+00:00:00,000 --> 00:00:187.480
+So right here, of course, we can say 2B is equal to 9.

@@ -51,7 +51,7 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 				continue
 			}
 
-			err = video_processing.AddSubtitlesToSegment(mergedSegment, job.SRTSegment, mergedSegment, job.SegmentIdx)
+			err = video_processing.AddSubtitlesToSegment(mergedSegment, job.SRTSegment, mergedSegment, job.SegmentIdx, job.TempDirPrefix)
 			if err != nil {
 				errors <- fmt.Errorf("SegmentWorker %d: failed to add subtitles to segment %d: %v", w.ID, job.SegmentIdx, err)
 				continue

@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path"
 	"videoUploadAndProcessing/pkg/whisper_api"
 )
 
@@ -19,9 +20,10 @@ func printVideoStreamInfo(videoPath string) error {
 	return nil
 }
 
-func createTemporarySRTFile(srtSegment whisper_api.SRTSegment, segmentIdx int) (string, error) {
+func createTemporarySRTFile(srtSegment whisper_api.SRTSegment, segmentIdx int, tempDirPrefix string) (string, error) {
 	// Create a temporary SRT file
 	tempFileName := fmt.Sprintf("temp_%d.srt", segmentIdx)
+	tempFilePath := path.Join(tempDirPrefix, "segment_srt", tempFileName)
 	file, err := os.Create(tempFileName)
 	if err != nil {
 		return "", err
@@ -34,16 +36,16 @@ func createTemporarySRTFile(srtSegment whisper_api.SRTSegment, segmentIdx int) (
 		return "", err
 	}
 
-	return tempFileName, nil
+	return tempFilePath, nil
 }
 
-func AddSubtitlesToSegment(videoPath string, srtSegment whisper_api.SRTSegment, outputPath string, segmentIdx int) error {
+func AddSubtitlesToSegment(videoPath string, srtSegment whisper_api.SRTSegment, outputPath string, segmentIdx int, tempDirPrefix string) error {
 	// Reset StartTime and EndTime
 	srtSegment.StartTime = 0
 	srtSegment.EndTime -= srtSegment.StartTime
 
 	// Create a temporary SRT file
-	tempFileName, err := createTemporarySRTFile(srtSegment, segmentIdx)
+	tempFileName, err := createTemporarySRTFile(srtSegment, segmentIdx, tempDirPrefix)
 	if err != nil {
 		return fmt.Errorf("error creating temporary SRT file for segment %d: %v", segmentIdx, err)
 	}

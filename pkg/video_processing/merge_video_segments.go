@@ -5,7 +5,9 @@ import (
 	"log"
 	"os"
 	"path"
+	"strconv"
 	"strings"
+	"time"
 )
 
 // MergeVideoAndAudio merges a video and an audio file using ffmpeg and outputs to a specified file.
@@ -81,14 +83,17 @@ func MergeAllVideoSegmentsTogether(fileName string, segmentPaths []string) (stri
 	//Merge all segments into final output and store at /pkg/video_processing/final_output
 	finalVideoDir := os.Getenv("PROCESSED_VIDEO_PATH")
 
+	currentTimestamp := time.Now().Unix()
+	timestampStr := strconv.FormatInt(currentTimestamp, 10)
+
 	// 去掉 fileName 的 ".mp4" 後綴
 	fileNameWithoutExt := strings.TrimSuffix(fileName, ".mp4")
 
 	// 生成帶有 '_processed' 後綴的新名稱輸出檔名
-	outputVideoName := fmt.Sprintf("%s_processed.mp4", fileNameWithoutExt)
+	outputVideoNameWithTimestamp := fmt.Sprintf("%s_%s_processed.mp4", fileNameWithoutExt, timestampStr)
 
 	// 將新名稱用於最終輸出視頻的路徑
-	outputVideo := path.Join(finalVideoDir, outputVideoName)
+	outputVideo := path.Join(finalVideoDir, outputVideoNameWithTimestamp)
 
 	log.Println("Running ffmpeg command to concat all segments from list file...")
 
