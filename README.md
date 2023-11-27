@@ -19,16 +19,22 @@
 - [Go](https://golang.org/dl/) (版本 1.13 或更高)
 - [FFmpeg](https://ffmpeg.org/download.html)
 
+如果使用linux系統，運行以下命令安裝FFmpeg:
+
+```bash
+sudo apt update
+sudo apt install ffmpeg -y
+```
+
+
 ## 使用
 
 首先，克隆此存儲庫到您的本地機器：
 
 ```bash
-
 git clone https://github.com/b10902026-jimmy/videoUploadAndProcessing_go
 cd videoUploadAndProcessing_go/cmd
 go run main.go
-
 ```
 你可以在'cmd'目錄底下的'workingProgress.log'查看程式的運行日誌
 
@@ -83,6 +89,13 @@ Before running this service, ensure you have installed the following software:
 
 - [Go](https://golang.org/dl/) (version 1.13 or higher)
 - [FFmpeg](https://ffmpeg.org/download.html)
+
+If you're using a Linux system, run the following command to install FFmpeg:
+
+```bash
+sudo apt update
+sudo apt install ffmpeg -y
+```
 
 ## Usage
 
