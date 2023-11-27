@@ -58,6 +58,8 @@ docker build -t video-processor:latest .(使用當前目錄的Dockerfile來構�
 container啟動指令:docker run -d -v /home/shared/video_processing_log:/app/log -v /home/shared/unprocessed_videos:/home/shared/unprocessed_videos -v /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
 
 
+----------
+
 # Video Upload and Processing Service
 
 This is a video processing service developed using the Go language. Its main features include extracting audio from videos, converting the audio to text, generating subtitle files, and dividing the video into multiple segments based on subtitles. Each segment is processed in parallel, replacing human voices with AI-generated voices, and then combining all the processed segments for output.
