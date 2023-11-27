@@ -45,7 +45,7 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 				mergedSegment = job.VideoPath + "_merged.mp4"
 			}
 
-			err = video_processing.MergeVideoAndAudioBySegments(job.VideoPath, audioSegment, mergedSegment, job.SegmentIdx)
+			err = video_processing.MergeVideoAndAudioBySegments(job.VideoPath, audioSegment, mergedSegment, job.SegmentIdx, job.TempDirPrefix)
 			if err != nil {
 				errors <- fmt.Errorf("SegmentWorker %d: failed to merge video and audio for segment %d: %v", w.ID, job.SegmentIdx, err)
 				continue

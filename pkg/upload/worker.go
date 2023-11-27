@@ -168,7 +168,7 @@ func ProcessJob(job Job) error {
 	allSegmentPaths = mergedSegments
 
 	log.Println("Starting to merge all the video segments..")
-	outputVideo, err := video_processing.MergeAllVideoSegmentsTogether(job.FileName, allSegmentPaths)
+	outputVideo, err := video_processing.MergeAllVideoSegmentsTogether(job.FileName, allSegmentPaths, tempDirPrefix)
 	if err != nil {
 		log.Printf("Failed to merge video segments into final_video: %v", err)
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)

@@ -1,3 +1,0 @@
-1
-00:00:00,000 --> 00:00:118.320
-First of all, of course, imagine we have to do this plus that.
