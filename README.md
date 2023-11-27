@@ -1,6 +1,6 @@
 # 影片上傳並將人聲轉換為機器聲之音訊轉換服務
 
-這是一個使用 Go 語言開發的視頻處理服務，主要功能包括從視頻中提取語音、將語音轉換為文本、生成字幕文件，並將視頻分割成基於字幕的多個片段。
+這是一個使用 Go 語言開發的視頻處理服務，主要功能包括從視頻中提取語音、將語音轉換為文本、生成字幕文件，並將視頻分割成基於字幕的多個片段。各個片段分別平行處理，將人聲替換成AI語音後，再將所有處理過的片段結合輸出。
 
 ## 功能
 
@@ -60,7 +60,7 @@ container啟動指令:docker run -d -v /home/shared/video_processing_log:/app/lo
 
 # Video Upload and Processing Service
 
-This is a video processing service developed in Go, featuring functions such as extracting voice from videos, converting the voice to text, generating subtitle files, and splitting the video into multiple segments based on the subtitles.
+This is a video processing service developed using the Go language. Its main features include extracting audio from videos, converting the audio to text, generating subtitle files, and dividing the video into multiple segments based on subtitles. Each segment is processed in parallel, replacing human voices with AI-generated voices, and then combining all the processed segments for output.
 
 ## Features
 
@@ -83,7 +83,7 @@ Before running this service, ensure you have installed the following software:
 
 First, clone this repository to your local machine:
 
-```bash
+``` bash
 git clone https://github.com/b10902026-jimmy/videoUploadAndProcessing_go
 cd videoUploadAndProcessing_go/cmd
 go run main.go
@@ -95,6 +95,7 @@ You can view the program's running log in the workingProgress.log under the cmd 
 
 The project's directory structure is as follows:
 
+``` bash
 .
 ├── cmd
 │   └── main.go
@@ -104,6 +105,8 @@ The project's directory structure is as follows:
 │   ├── video_processing
 │   └── whisper_api
 └── README.md
+
+```
 
 - 'cmd/main.go' is the entry point of the application.
 - The 'pkg' directory contains all business logic related to video processing.
