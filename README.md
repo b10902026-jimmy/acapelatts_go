@@ -36,6 +36,7 @@ go run main.go
 
  項目的目錄結構如下：
 
+``` bash
 .
 ├── cmd
 │   └── main.go
@@ -45,6 +46,8 @@ go run main.go
 │   ├── video_processing
 │   └── whisper_api
 └── README.md
+
+```
 
 - 'cmd/main.go' 是應用程序的入口點。
 - 'pkg' 目錄包含所有與視頻處理相關的業務邏輯。
