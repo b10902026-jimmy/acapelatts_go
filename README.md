@@ -1,5 +1,6 @@
 # acapelatts_go
 
+
 #-t 參數用來自定義image之tag
 docker build -t video-processor:latest .
 

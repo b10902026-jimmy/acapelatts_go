@@ -110,6 +110,7 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 	return outputPath, nil
 }
 
+// 流式讀取SRT內容
 func ReadSRTFileFromPath(filePath string) ([]SRTSegment, error) {
 	// 打開SRT文件以供讀取
 	file, err := os.Open(filePath)
