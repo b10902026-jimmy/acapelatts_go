@@ -11,7 +11,7 @@ func main() {
 
 	logfilepath := os.Getenv("VIDEO_PROCESSING_LOG_PATH")
 
-	// 打開或創建一個名為 "example.log" 的檔案
+	// 創建log檔案
 	logFile, err := os.OpenFile(logfilepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("Failed to open or create log file: %v\n", err)

@@ -7,12 +7,10 @@ import (
 	"path"
 )
 
-func saveAudioToFile(content []byte, filename string) error {
-	// 拼接檔案路径
-	dirPath := "../pkg/video_processing/tmp/audio"
-	filePath := path.Join(dirPath, filename)
+func saveAudioToFile(content []byte, tempAudioFilePath string) error {
 
 	// 確認路徑存在，如果不存在則建立資料夾
+	dirPath := path.Dir(tempAudioFilePath)
 	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
 		err = os.MkdirAll(dirPath, 0755)
 		if err != nil {
@@ -22,7 +20,7 @@ func saveAudioToFile(content []byte, filename string) error {
 	}
 
 	// 建立檔案
-	file, err := os.Create(filePath)
+	file, err := os.Create(tempAudioFilePath)
 	if err != nil {
 		log.Printf("error creating file: %v", err)
 		return fmt.Errorf("error creating file: %v", err)

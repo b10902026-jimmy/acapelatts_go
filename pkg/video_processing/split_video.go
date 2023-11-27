@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path"
 	"strings"
 	"videoUploadAndProcessing/pkg/whisper_api"
 )
@@ -13,13 +14,13 @@ type VideoSegment struct {
 	Duration float64
 }
 
-func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRTSegment, videoDuration float64) ([]string, []string, error) {
+func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRTSegment, videoDuration float64, tempDirPrefix string) ([]string, []string, error) {
 	var allSegmentPaths []string
 	var voiceSegmentPaths []string
-	const outputDir = "../pkg/video_processing/tmp/video/"
+	tempVideoDir := path.Join(tempDirPrefix, "video")
 
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		err = os.MkdirAll(outputDir, 0755)
+	if _, err := os.Stat(tempVideoDir); os.IsNotExist(err) {
+		err = os.MkdirAll(tempVideoDir, 0755)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to create output directory: %v", err)
 		}
@@ -34,14 +35,14 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 		// For gaps
 		if ts.StartTime > lastEndTime {
 			gapDuration := ts.StartTime - lastEndTime
-			gapOutputFile := outputDir + fmt.Sprintf("video_gap_segment%d.mp4", i)
+			gapOutputFile := tempVideoDir + fmt.Sprintf("video_gap_segment%d.mp4", i)
 			segmentTimes = append(segmentTimes, ts.StartTime)
 			allSegmentPaths = append(allSegmentPaths, gapOutputFile)
 			gapAndEndSegmentInfo = append(gapAndEndSegmentInfo, VideoSegment{Path: gapOutputFile, Duration: gapDuration})
 		}
 
 		// For voice segments
-		outputFile := outputDir + fmt.Sprintf("video_voice_segment%d.mp4", i)
+		outputFile := tempVideoDir + fmt.Sprintf("video_voice_segment%d.mp4", i)
 		segmentTimes = append(segmentTimes, ts.EndTime)
 		allSegmentPaths = append(allSegmentPaths, outputFile)
 		voiceSegmentPaths = append(voiceSegmentPaths, outputFile)
@@ -52,7 +53,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 	// For end segments
 	if lastEndTime < videoDuration {
 		endDuration := videoDuration - lastEndTime
-		endOutputFile := outputDir + "video_end_segment.mp4"
+		endOutputFile := tempVideoDir + "video_end_segment.mp4"
 		segmentTimes = append(segmentTimes, videoDuration)
 		allSegmentPaths = append(allSegmentPaths, endOutputFile)
 		gapAndEndSegmentInfo = append(gapAndEndSegmentInfo, VideoSegment{Path: endOutputFile, Duration: endDuration})
@@ -79,13 +80,13 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 		"-reset_timestamps", "1",
 		"-force_key_frames", segmentTimesStr, // 強制賦予關鍵幀
 		"-segment_times", segmentTimesStr,
-		outputDir+"segment%d.mp4")
+		tempVideoDir+"segment%d.mp4")
 
 	if err != nil {
 		return nil, nil, fmt.Errorf("error executing FFmpeg command: %v", err)
 	}
 
-	files, err := os.ReadDir(outputDir)
+	files, err := os.ReadDir(tempVideoDir)
 	if err != nil {
 		return nil, nil, fmt.Errorf("error reading directory: %v", err)
 	}
@@ -100,7 +101,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 	log.Printf("Total number of segments splited by ffmpeg command: %d\n", segmentCount)
 
 	for i, expectedPath := range allSegmentPaths {
-		actualPath := outputDir + fmt.Sprintf("segment%d.mp4", i)
+		actualPath := tempVideoDir + fmt.Sprintf("segment%d.mp4", i)
 		err = os.Rename(actualPath, expectedPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error renaming segment file: %v", err)
@@ -126,7 +127,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 	// 生成靜音並覆蓋原文件
 	for i, path := range nonVoiceSegmentPaths {
 		// 生成靜音音軌
-		tempAudioPath := outputDir + "temp_audio.aac"
+		tempAudioPath := tempVideoDir + "temp_audio.aac"
 		durationStr := fmt.Sprintf("%f", nonVoiceDurations[i])
 		err := execFFMPEG("-y", "-f", "lavfi", "-t", durationStr, "-i", "anullsrc=r=44100:cl=stereo", tempAudioPath)
 		if err != nil {
@@ -134,7 +135,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 		}
 
 		// 合併靜音音軌與原片段視頻
-		tempVideoPath := outputDir + "temp_video.mp4"
+		tempVideoPath := tempVideoDir + "temp_video.mp4"
 		err = execFFMPEG("-i", path, "-i", tempAudioPath, "-c:v", "copy", "-c:a", "aac", "-strict", "experimental", "-map", "0:v", "-map", "1:a", tempVideoPath)
 		if err != nil {
 			return nil, nil, fmt.Errorf("error merging video and audio: %v", err)
