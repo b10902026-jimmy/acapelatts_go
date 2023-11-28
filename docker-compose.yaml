@@ -1,7 +1,42 @@
-version: '3.1'
-
+version: '3.8'
 services:
-  video-processor-go:
+  api-system:
+    image: api-system-django
+    container_name: api-system
+    ports:
+      - "30031:30031"
+    volumes:
+      - /home/shared/api_system_log:/app/EMI_project/api_system_log/
+
+  upload-video:
+    image: upload-video-golang
+    container_name: upload-video
+    ports:
+      - "30036:30036"
+    volumes:
+      - /home/shared/unprocessed_videos/:/home/shared/unprocessed_videos/
+
+  phpmyadmin:
+    image: phpmyadmin:5.0
+    container_name: phpmyadmin
+    environment:
+      PMA_HOST: "mysql"
+    ports:
+      - "30035:80"
+    links:
+      - mysql
+
+  mysql:
+    image: mysql:5.7.24
+    container_name: mysql
+    ports:
+      - "30034:3306"
+    volumes:
+      - ~/db_data/mysql:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+
+  video-processor:
     image: video-processor:latest
     container_name: video-processor-go
     ports:
