@@ -116,7 +116,7 @@ func CallAcapelaAPI(text string, voice string) (AcapelaResponse, error) {
 	return AcapelaResponse{Content: content}, nil
 }
 
-func ConvertTextToSpeechUsingAcapela(text string, voice string, segmentIndex int) (string, error) {
+func ConvertTextToSpeechUsingAcapela(text string, voice string, segmentIndex int, tempDirPrefix string) (string, error) {
 	// 使用提供的文字和語音調用Acapela API
 	acapelaResp, err := CallAcapelaAPI(text, voice)
 	if err != nil {
@@ -133,12 +133,22 @@ func ConvertTextToSpeechUsingAcapela(text string, voice string, segmentIndex int
 
 	// 將返回的內容保存為mp3文件，使用segmentIndex生成唯一的檔名
 	tempFileName := fmt.Sprintf("acapela_audio_segment_%d.mp3", segmentIndex)
-	tempFilePath := path.Join("../pkg/video_processing/tmp/audio", tempFileName)
-	err = saveAudioToFile(acapelaResp.Content, tempFileName) // 注意这里只需要传文件名
+	// 使用 tempDirPrefix 作為前綴
+	audioDir := path.Join(tempDirPrefix, "audio") // 新增audio子目錄
+	tempAudioFilePath := path.Join(audioDir, tempFileName)
+
+	// 確保 audio 子目錄存在
+	if err := os.MkdirAll(audioDir, 0755); err != nil {
+		log.Printf("Failed to create audio directory: %v", err)
+		return "", err
+	}
+
+	// 儲存音頻到文件
+	err = saveAudioToFile(acapelaResp.Content, tempAudioFilePath) // 這裡應該傳入完整路徑
 	if err != nil {
 		log.Printf("Failed to save audio to file: %v", err)
 		return "", err
 	}
 
-	return tempFilePath, nil
+	return tempAudioFilePath, nil
 }

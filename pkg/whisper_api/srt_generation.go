@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -16,9 +17,14 @@ type SRTSegment struct {
 	Text      string
 }
 
-func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
+// 流式建立SRTfile(根據whisper api之response)
+func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps, tempDirPrefix string) (string, error) {
+
+	// 使用 tempDirPrefix 來構建 SRT 文件的路徑
+	srtFileName := "sentenceTimeStamps.srt"
+	outputPath := path.Join(tempDirPrefix, "subtitles", srtFileName)
+
 	// 檢查並創建目錄（如果不存在）
-	outputPath := "../pkg/video_processing/tmp/subtitles/output.srt"
 	outputDir := filepath.Dir(outputPath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
@@ -59,16 +65,21 @@ func StreamedCreateSRTFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (
 	return outputPath, nil // 返回生成的SRT文件的路徑
 }
 
-// secondsToSRTFormat將秒轉換為SRT格式的時間戳
+// 將秒轉換為SRT格式的時間戳
 func secondsToSRTFormat(seconds float64) string {
 	minutes := (int(seconds) % 3600) / 60
 	seconds = float64(int(seconds)%60) + (seconds - float64(int(seconds)))
 	return fmt.Sprintf("%02d:%06.3f", minutes, seconds)
 }
 
-func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimestamps) (string, error) {
-	outputPath := "../pkg/video_processing/tmp/subtitles/wholeWordTimestamps.srt"
+// 建立單詞等級的時間戳
+func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimestamps, tempDirPrefix string) (string, error) {
 
+	// 使用 tempDirPrefix 來構建 SRT 文件的路徑
+	srtFileName := "wholeWordTimestamps.srt"
+	outputPath := path.Join(tempDirPrefix, "subtitles", srtFileName)
+
+	// 檢查並創建目錄（如果不存在）
 	outputDir := filepath.Dir(outputPath)
 	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
 		err = os.MkdirAll(outputDir, 0755)
@@ -99,6 +110,7 @@ func CreateWholeWordTimestampsFile(whisperAndWordTimestamps *WhisperAndWordTimes
 	return outputPath, nil
 }
 
+// 流式讀取SRT內容
 func ReadSRTFileFromPath(filePath string) ([]SRTSegment, error) {
 	// 打開SRT文件以供讀取
 	file, err := os.Open(filePath)

@@ -11,10 +11,11 @@ import (
 )
 
 type SegmentJob struct {
-	SRTSegment whisper_api.SRTSegment
-	VideoPath  string
-	Suffix     string
-	SegmentIdx int
+	SRTSegment    whisper_api.SRTSegment
+	VideoPath     string
+	Suffix        string
+	SegmentIdx    int
+	TempDirPrefix string
 }
 
 type SegmentWorker struct {
@@ -29,7 +30,7 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 		for job := range w.JobQueue {
 			log.Printf("SegmentWorker %d: Starting processing for segment %d", w.ID, job.SegmentIdx)
 			// Convert text to speech
-			audioSegment, err := acapela_api.ConvertTextToSpeechUsingAcapela(job.SRTSegment.Text, job.Suffix, job.SegmentIdx)
+			audioSegment, err := acapela_api.ConvertTextToSpeechUsingAcapela(job.SRTSegment.Text, job.Suffix, job.SegmentIdx, job.TempDirPrefix)
 			if err != nil {
 				errors <- fmt.Errorf("SegmentWorker %d: failed to convert text to speech for segment %d: %v", w.ID, job.SegmentIdx, err)
 				continue
@@ -44,13 +45,13 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 				mergedSegment = job.VideoPath + "_merged.mp4"
 			}
 
-			err = video_processing.MergeVideoAndAudioBySegments(job.VideoPath, audioSegment, mergedSegment, job.SegmentIdx)
+			err = video_processing.MergeVideoAndAudioBySegments(job.VideoPath, audioSegment, mergedSegment, job.SegmentIdx, job.TempDirPrefix)
 			if err != nil {
 				errors <- fmt.Errorf("SegmentWorker %d: failed to merge video and audio for segment %d: %v", w.ID, job.SegmentIdx, err)
 				continue
 			}
 
-			err = video_processing.AddSubtitlesToSegment(mergedSegment, job.SRTSegment, mergedSegment, job.SegmentIdx)
+			err = video_processing.AddSubtitlesToSegment(mergedSegment, job.SRTSegment, mergedSegment, job.SegmentIdx, job.TempDirPrefix)
 			if err != nil {
 				errors <- fmt.Errorf("SegmentWorker %d: failed to add subtitles to segment %d: %v", w.ID, job.SegmentIdx, err)
 				continue
@@ -73,7 +74,7 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 }
 
 // Handles the logic for segment workers.
-func ProcessSegmentJobs(voiceSegmentPaths []string, allSegmentPaths []string, srtSegments []whisper_api.SRTSegment) ([]string, error) {
+func ProcessSegmentJobs(voiceSegmentPaths []string, allSegmentPaths []string, srtSegments []whisper_api.SRTSegment, tempDirPrefix string) ([]string, error) {
 	var wg sync.WaitGroup
 	errors := make(chan error, len(voiceSegmentPaths))
 
@@ -99,10 +100,11 @@ func ProcessSegmentJobs(voiceSegmentPaths []string, allSegmentPaths []string, sr
 
 	for i := 0; i < len(voiceSegmentPaths); i++ {
 		segmentJob := SegmentJob{
-			SRTSegment: srtSegments[i],
-			VideoPath:  voiceSegmentPaths[i],
-			Suffix:     "Ryan22k_NT",
-			SegmentIdx: i,
+			SRTSegment:    srtSegments[i],
+			VideoPath:     voiceSegmentPaths[i],
+			Suffix:        "Ryan22k_NT",
+			SegmentIdx:    i,
+			TempDirPrefix: tempDirPrefix, // 新增這行
 		}
 		segmentWorkers[i].JobQueue <- segmentJob
 	}

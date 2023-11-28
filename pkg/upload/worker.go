@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
+	"path"
+	"path/filepath"
 	"time"
 	"videoUploadAndProcessing/pkg/video_processing"
 	"videoUploadAndProcessing/pkg/whisper_api"
@@ -62,12 +65,34 @@ func getBackoffDuration(retryCount int) time.Duration {
 	return backoff
 }
 
+func createUniqueTempDir(basePath string) (string, error) {
+	uniqueDir := path.Join(basePath, fmt.Sprintf("%d", time.Now().UnixNano()))
+	err := os.MkdirAll(uniqueDir, 0755)
+	if err != nil {
+		return "", err
+	}
+	return uniqueDir, nil
+}
+
 func ProcessJob(job Job) error {
 	if job.File != nil {
 		defer job.File.Close()
 	}
 
-	log.Println("Processing vedio..") // 添加信息
+	executablePath, err := os.Executable()
+	if err != nil {
+		log.Fatalf("Failed to get executable path: %v", err)
+	}
+
+	basePath := filepath.Dir(executablePath)
+
+	tempDirPrefix, err := createUniqueTempDir(basePath)
+	if err != nil {
+		log.Fatalf("Failed to create a unique temporary directory: %v", err)
+	}
+
+	log.Printf("Temporary directory created at: %s", tempDirPrefix)
+	//defer os.RemoveAll(tempDirPrefix) // 確保在函數結束時清理暫存目錄，避免資源浪費
 
 	// 獲取影片的metadata
 	metadata, err := video_processing.GetVideoMetadata(job.UnprocessedFilePath)
@@ -98,14 +123,14 @@ func ProcessJob(job Job) error {
 	log.Println("Generating SRT file streamly")
 
 	//根據STT結果創建SRT file(流式)
-	srtFilePath, err := whisper_api.StreamedCreateSRTFile(whisperAndWordTimestamps)
+	srtFilePath, err := whisper_api.StreamedCreateSRTFile(whisperAndWordTimestamps, tempDirPrefix)
 	if err != nil {
 		log.Printf("Error creating SRT file: %v", err)
 		return fmt.Errorf("error creating SRT file: %v", err)
 	}
 
 	//創建所有單詞的時間戳
-	outputPath, err := whisper_api.CreateWholeWordTimestampsFile(whisperAndWordTimestamps)
+	outputPath, err := whisper_api.CreateWholeWordTimestampsFile(whisperAndWordTimestamps, tempDirPrefix)
 	if err != nil {
 		log.Printf("Error creating wholeWordTimestamps file: %v\n", err)
 	} else {
@@ -129,7 +154,7 @@ func ProcessJob(job Job) error {
 	}
 
 	// Splitting video into segments and preparing for parallel processing
-	allSegmentPaths, voiceSegmentPaths, err := video_processing.SplitVideoIntoSegmentsBySRT(job.UnprocessedFilePath, srtSegments, videoDuration)
+	allSegmentPaths, voiceSegmentPaths, err := video_processing.SplitVideoIntoSegmentsBySRT(job.UnprocessedFilePath, srtSegments, videoDuration, tempDirPrefix)
 	if err != nil {
 		log.Printf("Failed to split video into segments: %v", err)
 		return fmt.Errorf("failed to split video into segments: %v", err)
@@ -138,7 +163,7 @@ func ProcessJob(job Job) error {
 	log.Println("Converting audio to standard pronunciation using Acapela TTS API..")
 
 	// After spliting video into many segments,create a go worker pool to handle it.
-	mergedSegments, err := ProcessSegmentJobs(voiceSegmentPaths, allSegmentPaths, srtSegments)
+	mergedSegments, err := ProcessSegmentJobs(voiceSegmentPaths, allSegmentPaths, srtSegments, tempDirPrefix)
 
 	if err != nil {
 		log.Printf("Error while processing segment workers: %v", err)
@@ -149,7 +174,7 @@ func ProcessJob(job Job) error {
 	allSegmentPaths = mergedSegments
 
 	log.Println("Starting to merge all the video segments..")
-	outputVideo, err := video_processing.MergeAllVideoSegmentsTogether(job.FileName, allSegmentPaths)
+	outputVideo, err := video_processing.MergeAllVideoSegmentsTogether(job.FileName, allSegmentPaths, tempDirPrefix)
 	if err != nil {
 		log.Printf("Failed to merge video segments into final_video: %v", err)
 		return fmt.Errorf("failed to merge video segments into final_video: %v", err)
