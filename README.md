@@ -63,16 +63,22 @@ go run main.go
 
 ### 根據目錄中的dockerfile構建映像:
 
-- -t 參數用來自定義image之tag
 docker build -t video-processor:latest .
+
+- -t 參數用來自定義image之tag
+
 
 ### container啟動指令:
 
-- -v參數用於掛載容器內的卷(volume)到本地主機上，-p用於容器與主機端口的映射，--env用於將目錄中的.env掛進容器，--name幫容器取名
 docker run -d -v /home/shared/video_processing_log:/app/log -v /home/shared/unprocessed_videos:/home/shared/unprocessed_videos -v /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
 
+- -v參數用於掛載容器內的卷(volume)到本地主機上
+- -p用於容器與主機端口的映射
+- --env用於將目錄中的.env掛進容器
+- --name幫容器取名
 
-----------
+
+-----------------------------------------
 
 # Video Upload and Processing Service
 
