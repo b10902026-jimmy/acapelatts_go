@@ -62,15 +62,17 @@ go run main.go
 ## 若要用此專案在docker容器上運行: 
 
 ### 根據目錄中的dockerfile構建映像:
-
+```bash
 docker build -t video-processor:latest .
-
+```
 - -t 參數用來自定義image之tag
 
 
 ### container啟動指令:
 
+```bash
 docker run -d -v /home/shared/video_processing_log:/app/log -v /home/shared/unprocessed_videos:/home/shared/unprocessed_videos -v /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
+```
 
 - -v參數用於掛載容器內的卷(volume)到本地主機上
 - -p用於容器與主機端口的映射
@@ -144,15 +146,15 @@ The project's directory structure is as follows:
 ## Running this Project in a Docker Container
 
 ### Build the Docker image from Dockerfile in the directory: 
-
+```bash
 docker build -t video-processor:latest .
-
+```
 - The -t parameter is used for customizing the tag of an image.
 
 ### Command to start the container:
-
+```bash
 docker run -d -v /home/shared/video_processing_log:/app/log -v /home/shared/unprocessed_videos:/home/shared/unprocessed_videos -v /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
-
+```
 - The -v parameter is used for mounting volumes inside the container to the local host machine.
 - The -p parameter is used for mapping ports between the container and the host.
 - The --env-file parameter is used for loading environment variables from a file into the container.
