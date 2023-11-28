@@ -35,14 +35,14 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 		// For gaps
 		if ts.StartTime > lastEndTime {
 			gapDuration := ts.StartTime - lastEndTime
-			gapOutputFile := tempVideoDir + fmt.Sprintf("video_gap_segment%d.mp4", i)
+			gapOutputFile := tempVideoDir + fmt.Sprintf("/video_gap_segment%d.mp4", i)
 			segmentTimes = append(segmentTimes, ts.StartTime)
 			allSegmentPaths = append(allSegmentPaths, gapOutputFile)
 			gapAndEndSegmentInfo = append(gapAndEndSegmentInfo, VideoSegment{Path: gapOutputFile, Duration: gapDuration})
 		}
 
 		// For voice segments
-		outputFile := tempVideoDir + fmt.Sprintf("video_voice_segment%d.mp4", i)
+		outputFile := tempVideoDir + fmt.Sprintf("/video_voice_segment%d.mp4", i)
 		segmentTimes = append(segmentTimes, ts.EndTime)
 		allSegmentPaths = append(allSegmentPaths, outputFile)
 		voiceSegmentPaths = append(voiceSegmentPaths, outputFile)
@@ -53,7 +53,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 	// For end segments
 	if lastEndTime < videoDuration {
 		endDuration := videoDuration - lastEndTime
-		endOutputFile := tempVideoDir + "video_end_segment.mp4"
+		endOutputFile := tempVideoDir + "/video_end_segment.mp4"
 		segmentTimes = append(segmentTimes, videoDuration)
 		allSegmentPaths = append(allSegmentPaths, endOutputFile)
 		gapAndEndSegmentInfo = append(gapAndEndSegmentInfo, VideoSegment{Path: endOutputFile, Duration: endDuration})

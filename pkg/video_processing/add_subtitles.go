@@ -21,16 +21,25 @@ func printVideoStreamInfo(videoPath string) error {
 }
 
 func createTemporarySRTFile(srtSegment whisper_api.SRTSegment, segmentIdx int, tempDirPrefix string) (string, error) {
-	// Create a temporary SRT file
+
+	// 創建暫存路徑
 	tempFileName := fmt.Sprintf("temp_%d.srt", segmentIdx)
 	tempFilePath := path.Join(tempDirPrefix, "segment_srt", tempFileName)
-	file, err := os.Create(tempFileName)
+
+	// 確保目錄存在
+	tempDir := path.Dir(tempFilePath)
+	if err := os.MkdirAll(tempDir, 0755); err != nil {
+		return "", fmt.Errorf("failed to create directory %s: %v", tempDir, err)
+	}
+
+	// 正確使用完整路徑創建文件
+	file, err := os.Create(tempFilePath)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create file %s: %v", tempFilePath, err)
 	}
 	defer file.Close()
 
-	// Write to the SRT file
+	// 將內容寫入SRT FILE
 	_, err = file.WriteString(fmt.Sprintf("1\n00:00:00,000 --> 00:00:%.3f\n%s\n", srtSegment.EndTime, srtSegment.Text))
 	if err != nil {
 		return "", err

@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
 	"videoUploadAndProcessing/pkg/video_processing"
 	"videoUploadAndProcessing/pkg/whisper_api"
@@ -78,15 +79,20 @@ func ProcessJob(job Job) error {
 		defer job.File.Close()
 	}
 
-	log.Println("Processing vedio..") // 添加信息
-
-	// 創建唯一的暫存目錄
-	tempDirPrefix, err := createUniqueTempDir("../pkg/tmp")
+	executablePath, err := os.Executable()
 	if err != nil {
-		log.Printf("Failed to create a unique temporary directory: %v", err)
-		return fmt.Errorf("failed to create a unique temporary directory: %v", err)
+		log.Fatalf("Failed to get executable path: %v", err)
 	}
-	//defer os.RemoveAll(tempDirPrefix) // 確保在函數結束時清理暫存目錄
+
+	basePath := filepath.Dir(executablePath)
+
+	tempDirPrefix, err := createUniqueTempDir(basePath)
+	if err != nil {
+		log.Fatalf("Failed to create a unique temporary directory: %v", err)
+	}
+
+	log.Printf("Temporary directory created at: %s", tempDirPrefix)
+	//defer os.RemoveAll(tempDirPrefix) // 確保在函數結束時清理暫存目錄，避免資源浪費
 
 	// 獲取影片的metadata
 	metadata, err := video_processing.GetVideoMetadata(job.UnprocessedFilePath)

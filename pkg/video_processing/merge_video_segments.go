@@ -12,16 +12,15 @@ import (
 
 // MergeVideoAndAudio merges a video and an audio file using ffmpeg and outputs to a specified file.
 func MergeVideoAndAudioBySegments(videoPath string, audioPath string, outputPath string, segmentIdx int, tempDirPrefix string) error {
-	tempAudioName := fmt.Sprintf("temp_audio_segment_%d.mp3", segmentIdx) // Unique name
-	tempAudioPath := path.Join(tempDirPrefix, "tempAudio", tempAudioName)
+	tempAudioDir := path.Join(tempDirPrefix, "tempAudio")
+	if err := os.MkdirAll(tempAudioDir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %v", tempAudioDir, err)
+	}
 
-	// Defer the removal of the temporary audio file
-	defer func() {
-		err := os.Remove(tempAudioPath)
-		if err != nil {
-			log.Printf("Warning: failed to remove temporary audio file: %v", err)
-		}
-	}()
+	tempAudioName := fmt.Sprintf("temp_audio_segment_%d.mp3", segmentIdx) // Unique name
+	tempAudioPath := path.Join(tempAudioDir, tempAudioName)
+
+	//defer os.Remove(tempAudioPath)
 
 	videoDuration, err := GetVideoDuration(videoPath)
 	if err != nil {
@@ -65,6 +64,7 @@ func MergeAllVideoSegmentsTogether(fileName string, segmentPaths []string, tempD
 
 	listFileName := "filelist.txt"
 	listFilePath := path.Join(tempDirPrefix, listFileName)
+	log.Printf("List file path: %s", listFilePath)
 
 	f, err := os.Create(listFilePath)
 	if err != nil {
@@ -108,11 +108,6 @@ func MergeAllVideoSegmentsTogether(fileName string, segmentPaths []string, tempD
 	}
 
 	log.Println("Successfully concat all segments from list file...")
-
-	err = os.Remove(listFilePath)
-	if err != nil {
-		log.Printf("warning: failed to remove list file: %v", err)
-	}
 
 	log.Println("All tempfile has been removed")
 	return outputVideoPath, nil
