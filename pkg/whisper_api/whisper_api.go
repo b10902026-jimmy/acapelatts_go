@@ -83,7 +83,7 @@ func CallWhisperAPI(apiKey string, audioReader io.Reader) (*WhisperAndWordTimest
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Status Code: %d", res.StatusCode)
+	log.Printf("Whisper API responded with status Code: %d", res.StatusCode)
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {

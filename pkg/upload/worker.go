@@ -150,7 +150,7 @@ func ProcessJob(job Job, workerID int) error {
 		return fmt.Errorf("failed to split video into segments: %v", err)
 	}
 
-	log.Println("Converting audio to standard pronunciation using Acapela TTS API..")
+	log.Println("Converting audio to standard pronunciation using the Acapela TTS API and substituting the human voice with a synthesized voice...")
 
 	// After spliting video into many segments,create a go worker pool to handle it.
 	mergedSegments, err := ProcessSegmentJobs(voiceSegmentPaths, allSegmentPaths, srtSegments, tempDirPrefix)

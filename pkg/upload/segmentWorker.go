@@ -25,6 +25,8 @@ type SegmentWorker struct {
 	SegmentIdx  int
 }
 
+const MaxSegmentWorkers = 100 // Limit of concurrent workers
+
 func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 	go func() {
 		for job := range w.JobQueue {
