@@ -22,13 +22,16 @@ echo "export VIDEO_PROCESSING_LOG_PATH=workingProgress.log" >> ~/.bashrc
 echo "export UNPROCESSED_VIDEO_PATH=/home/shared/unprocessed_videos" >> ~/.bashrc
 echo "export PROCESSED_VIDEO_PATH=/home/shared/processed_videos" >> ~/.bashrc
 
-# 創建資料夾並設定權限
-mkdir -p /home/shared/unprocessed_videos
-mkdir -p /home/shared/processed_videos
-chmod 777 /home/shared/unprocessed_videos
-chmod 777 /home/shared/processed_videos
+# 安裝 Docker
+sudo apt install docker.io
+sudo usermod -aG docker ${USER}
 
-# 重載 ~/.bashrc
+# 根據 Dockerfile 建立映像檔
+sudo docker build -t video-processor:latest .
+
+# 啟動相應的容器
+sudo docker run -d -v /home/shared/video_processing_log:/app/log -v /home/shared/unprocessed_videos:/home/shared/unprocessed_videos -v /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
+
 source ~/.bashrc
 
 echo "安裝和設定完成。"
