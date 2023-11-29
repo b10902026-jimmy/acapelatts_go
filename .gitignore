@@ -31,7 +31,8 @@ _testmain.go
 # Log files
 *.log
 
-
+# env file
+*.env
 
 # Executables
 *.exe
