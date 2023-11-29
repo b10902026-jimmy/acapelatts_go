@@ -11,15 +11,21 @@ func main() {
 
 	logfilepath := os.Getenv("VIDEO_PROCESSING_LOG_PATH")
 
-	// 創建log檔案
+	// Create the log file
 	logFile, err := os.OpenFile(logfilepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("Failed to open or create log file: %v\n", err)
 	}
 	defer logFile.Close()
 
-	// 將 log 的輸出定向到 file
+	// Redirect log output to file
 	log.SetOutput(logFile)
+
+	// Create a tmp directory
+	tmpDir := "tmp"
+	if err := os.MkdirAll(tmpDir, 0755); err != nil {
+		log.Fatalf("Failed to create tmp directory: %v\n", err)
+	}
 
 	// Create a new job queue with 100 slots.
 	jobQueue := make(chan upload.Job, 100)
