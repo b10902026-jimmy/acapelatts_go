@@ -60,8 +60,7 @@ func MergeVideoAndAudioBySegments(videoPath string, audioPath string, outputPath
 }
 
 func MergeAllVideoSegmentsTogether(fileName string, segmentPaths []string, tempDirPrefix string) (string, error) {
-	//Write all filepath into filelist.txt
-
+	// Write all filepath into filelist.txt
 	listFileName := "filelist.txt"
 	listFilePath := path.Join(tempDirPrefix, listFileName)
 	log.Printf("List file path: %s", listFilePath)
@@ -76,7 +75,10 @@ func MergeAllVideoSegmentsTogether(fileName string, segmentPaths []string, tempD
 	log.Println("Writing all video segment paths to list file...")
 
 	for _, segmentPath := range segmentPaths {
-		_, err = f.WriteString(fmt.Sprintf("file '%s'\n", segmentPath))
+		// Remove tempDirPrefix from segmentPath
+		relativeSegmentPath := strings.Replace(segmentPath, tempDirPrefix+"/", "", 1)
+
+		_, err = f.WriteString(fmt.Sprintf("file '%s'\n", relativeSegmentPath))
 		if err != nil {
 			log.Printf("Failed to write segment path to list file: %v", err)
 			return "", fmt.Errorf("failed to write segment path to list file: %v", err)

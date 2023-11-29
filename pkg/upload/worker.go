@@ -5,8 +5,6 @@ import (
 	"io"
 	"log"
 	"os"
-	"path"
-	"path/filepath"
 	"time"
 	"videoUploadAndProcessing/pkg/video_processing"
 	"videoUploadAndProcessing/pkg/whisper_api"
@@ -36,7 +34,7 @@ func (w Worker) Start() {
 	go func() {
 		for job := range w.JobQueue {
 			log.Printf("Worker %d processing job", w.ID)
-			err := ProcessJob(job)
+			err := ProcessJob(job, w.ID)
 
 			if err != nil {
 				if job.Retries < 2 { // 如果尚未達到最大重試次數
@@ -65,34 +63,28 @@ func getBackoffDuration(retryCount int) time.Duration {
 	return backoff
 }
 
-func createUniqueTempDir(basePath string) (string, error) {
-	uniqueDir := path.Join(basePath, fmt.Sprintf("%d", time.Now().UnixNano()))
+func createUniqueTempDir(workerID int) (string, error) {
+	uniqueDir := fmt.Sprintf("tmp/worker%d", workerID)
 	err := os.MkdirAll(uniqueDir, 0755)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create unique temp directory for worker %d: %v", workerID, err)
 	}
 	return uniqueDir, nil
 }
 
-func ProcessJob(job Job) error {
+func ProcessJob(job Job, workerID int) error {
 	if job.File != nil {
 		defer job.File.Close()
 	}
 
-	executablePath, err := os.Executable()
+	// Create a unique temporary directory for this worker
+	tempDirPrefix, err := createUniqueTempDir(workerID)
 	if err != nil {
-		log.Fatalf("Failed to get executable path: %v", err)
+		log.Fatalf("Failed to create a unique temporary directory for worker %d: %v", workerID, err)
 	}
-
-	basePath := filepath.Dir(executablePath)
-
-	tempDirPrefix, err := createUniqueTempDir(basePath)
-	if err != nil {
-		log.Fatalf("Failed to create a unique temporary directory: %v", err)
-	}
+	defer os.RemoveAll(tempDirPrefix) // Schedule the cleanup of this directory when the function exits
 
 	log.Printf("Temporary directory created at: %s", tempDirPrefix)
-	//defer os.RemoveAll(tempDirPrefix) // 確保在函數結束時清理暫存目錄，避免資源浪費
 
 	// 獲取影片的metadata
 	metadata, err := video_processing.GetVideoMetadata(job.UnprocessedFilePath)
@@ -143,8 +135,6 @@ func ProcessJob(job Job) error {
 		log.Printf("Error reading SRT file: %v", err)
 		return fmt.Errorf("error reading SRT file: %v", err)
 	}
-
-	log.Println("Spliting video into segments...")
 
 	//獲取影片時長
 	videoDuration, err := video_processing.GetVideoDuration(job.UnprocessedFilePath)

@@ -57,7 +57,7 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 				continue
 			}
 
-			log.Printf("SegmentWorker %d: Merged video and audio for segment %d", w.ID, job.SegmentIdx)
+			//log.Printf("SegmentWorker %d: Merged video and audio for segment %d", w.ID, job.SegmentIdx)
 
 			// Store the merged segment path at the location pointed to by SegmentPath
 			*w.SegmentPath = mergedSegment
@@ -66,7 +66,7 @@ func (w SegmentWorker) Start(wg *sync.WaitGroup, errors chan<- error) {
 		}
 
 		// Add a log here to check the final value of *w.SegmentPath
-		log.Printf("SegmentWorker %d: Final stored merged segment path: %s", w.ID, *w.SegmentPath)
+		//log.Printf("SegmentWorker %d: Final stored merged segment path: %s", w.ID, *w.SegmentPath)
 
 		// Decrement the wait group counter when done
 		wg.Done()

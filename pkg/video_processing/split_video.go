@@ -72,6 +72,7 @@ func SplitVideoIntoSegmentsBySRT(videoPath string, srtSegments []whisper_api.SRT
 	log.Println("Segment Times: ", segmentTimes)
 	log.Println("Segment TimesSTR: ", segmentTimesStr)
 
+	log.Println("Spliting video into segments...")
 	err := execFFMPEG("-i", videoPath,
 		"-c:v", "libx264",
 		"-c:a", "copy",

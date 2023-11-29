@@ -63,11 +63,13 @@ func AddSubtitlesToSegment(videoPath string, srtSegment whisper_api.SRTSegment, 
 	// Generate the FFmpeg subtitle filter string
 	subtitleStr := fmt.Sprintf("subtitles='%s:si=0'", tempFileName)
 
-	// Print video stream info
-	err = printVideoStreamInfo(videoPath)
-	if err != nil {
-		log.Printf("Warning: Failed to print video stream info: %v", err)
-	}
+	/*
+		// Print video stream info
+		err = printVideoStreamInfo(videoPath)
+		if err != nil {
+			log.Printf("Warning: Failed to print video stream info: %v", err)
+		}
+	*/
 
 	// Create temporary output file
 	tempOutputPath := outputPath + "_temp.mp4"
