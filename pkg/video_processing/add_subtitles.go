@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
 	"path"
 	"videoUploadAndProcessing/pkg/whisper_api"
 )
 
+/*
 func printVideoStreamInfo(videoPath string) error {
 	cmd := exec.Command("ffprobe", "-v", "error", "-select_streams", "v:0", "-show_entries", "stream=codec_name,codec_type", "-of", "default=noprint_wrappers=1:nokey=1", videoPath)
 	output, err := cmd.CombinedOutput()
@@ -18,7 +18,7 @@ func printVideoStreamInfo(videoPath string) error {
 
 	log.Printf("Stream info for video %s: \n%s", videoPath, output)
 	return nil
-}
+}*/
 
 func createTemporarySRTFile(srtSegment whisper_api.SRTSegment, segmentIdx int, tempDirPrefix string) (string, error) {
 

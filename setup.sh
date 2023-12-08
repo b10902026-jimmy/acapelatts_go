@@ -27,10 +27,10 @@ sudo apt install docker.io
 sudo usermod -aG docker ${USER}
 
 # 根據 Dockerfile 建立映像檔
-sudo docker build -t video-processor:latest .
+docker build -t video-processor:latest .
 
 # 啟動相應的容器
-sudo docker run -d -v /home/shared/video_processing_log:/app/log -v /home/shared/unprocessed_videos:/home/shared/unprocessed_videos -v /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
+docker run -d -v /home/shared/video_processing_log:/app/log -v /home/shared/unprocessed_videos:/home/shared/unprocessed_videos -v /home/shared/processed_videos:/home/shared/processed_videos -p 30016:30016 --env-file .env --name video-processor-go video-processor:latest
 
 source ~/.bashrc
 
