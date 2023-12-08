@@ -37,15 +37,16 @@ func (w Worker) Start() {
 			err := ProcessJob(job, w.ID)
 
 			if err != nil {
-				if job.Retries < 2 { // 如果尚未達到最大重試次數
+				/*if job.Retries < 2 { // 如果尚未達到最大重試次數
 					job.Retries++
 					backoffDuration := getBackoffDuration(job.Retries)
 					log.Printf("Job failed, retrying after %v", backoffDuration)
 					time.Sleep(backoffDuration)
 					w.JobQueue <- job // 將工作重新放入佇列
 				} else {
-					log.Printf("Job failed after %d retries", job.Retries)
-				}
+
+				}*/
+				log.Printf("Job failed after %d retries", job.Retries)
 			} else {
 				log.Printf("worker%d job done", w.ID)
 			}
@@ -54,6 +55,7 @@ func (w Worker) Start() {
 	}()
 }
 
+/*
 // Compute the backoff duration based on retry count.
 func getBackoffDuration(retryCount int) time.Duration {
 	backoff := InitialBackoffDuration * time.Duration(1<<retryCount)
@@ -61,7 +63,7 @@ func getBackoffDuration(retryCount int) time.Duration {
 		return MaxBackoffDuration
 	}
 	return backoff
-}
+}*/
 
 func createUniqueTempDir(workerID int) (string, error) {
 	uniqueDir := fmt.Sprintf("tmp/worker%d", workerID)

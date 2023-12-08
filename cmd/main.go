@@ -20,7 +20,7 @@ func main() {
 
 	// Redirect log output to file
 	log.SetOutput(logFile)
-
+	log.Printf("Writing log in %s", logfilepath)
 	// Create a tmp directory
 	tmpDir := "tmp"
 	if err := os.MkdirAll(tmpDir, 0755); err != nil {
