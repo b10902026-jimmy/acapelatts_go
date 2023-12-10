@@ -19,11 +19,10 @@ RUN go build -o /video-processing ./cmd/main.go
 # 使用 Ubuntu 作為基礎 image
 FROM ubuntu:latest
 
-# 更新套件並重新安裝 CA 證書並安裝ffmpeg
+# 更新套件、安裝 CA 證書、安裝ffmpeg和ffprobe
 RUN apt-get update && \
     apt-get install --reinstall -y ca-certificates && \
-    apt-get install -y ffmpeg -v 3.4.13
-
+    apt-get install -y ffmpeg
 
 # 複製編譯後的app到當前目錄
 COPY --from=builder /video-processing /video-processing
