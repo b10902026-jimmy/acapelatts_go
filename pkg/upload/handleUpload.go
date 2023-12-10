@@ -108,6 +108,8 @@ func HandleUpload(w http.ResponseWriter, r *http.Request, worker Worker) {
 		defer resp.Body.Close()
 		if resp.StatusCode != http.StatusOK {
 			log.Printf("Received non-OK status code from callback: %d", resp.StatusCode)
+		} else {
+			log.Printf("Received 200 status code from callback server!")
 		}
 	}()
 

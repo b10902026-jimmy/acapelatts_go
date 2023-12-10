@@ -1,5 +1,5 @@
 # 使用官方的 Golang image 作為基礎 image
-FROM golang:latest as builder
+FROM golang:1.21 as builder
 
 # 設定工作目錄
 WORKDIR /app
@@ -22,7 +22,7 @@ FROM ubuntu:latest
 # 更新套件並重新安裝 CA 證書並安裝ffmpeg
 RUN apt-get update && \
     apt-get install --reinstall -y ca-certificates && \
-    apt-get install -y ffmpeg
+    apt-get install -y ffmpeg -v 3.4.13
 
 
 # 複製編譯後的app到當前目錄
