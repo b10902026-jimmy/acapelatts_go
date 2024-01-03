@@ -3,7 +3,6 @@ module videoUploadAndProcessing
 go 1.20
 
 require (
-	github.com/1lann/dissonance v0.0.0-20230112204638-b3bab2c29061
 	github.com/joho/godotenv v1.5.1
 	github.com/swaggo/swag v1.16.2
 )
