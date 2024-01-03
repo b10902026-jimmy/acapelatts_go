@@ -4,21 +4,37 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
 	"videoUploadAndProcessing/pkg/upload"
 
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// 加載 .env 文件
-	err := godotenv.Load()
+	// load .env file from enviroments variable
+	envPath := os.Getenv("MYAPP_ENV_PATH")
+	if envPath == "" {
+		envPath = ".env" // Default to the local .env file
+	}
+
+	// load .env file
+	err := godotenv.Load(envPath)
 	if err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
+		log.Fatalf("Error loading .env file from path %s: %v", envPath, err)
 	}
 
 	logfilepath := os.Getenv("VIDEO_PROCESSING_LOG_PATH")
 
-	// Create the log file
+	// Extract the directory path from the log file path
+	logDir, _ := filepath.Split(logfilepath)
+
+	// Create the directory (including any necessary parent directories) if it doesn't exist
+	err = os.MkdirAll(logDir, 0755)
+	if err != nil {
+		log.Fatalf("Failed to create log directory: %v\n", err)
+	}
+
+	// Create the log file with necessary permissions
 	logFile, err := os.OpenFile(logfilepath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		log.Fatalf("Failed to open or create log file: %v\n", err)
