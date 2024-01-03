@@ -26,7 +26,7 @@ sudo apt update
 sudo apt install ffmpeg -y
 ```
 
-- 請參考.env.example進行環境變數的配置，並將.env檔建立於程式的根目錄
+請參考.env.example進行環境變數的配置，並將.env檔建立於程式的根目錄
 
 
 ## 使用
