@@ -8,6 +8,7 @@ tmp/
 *.a
 *.so
 
+*_videos/
 # Folders
 _obj
 _test

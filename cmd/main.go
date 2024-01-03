@@ -5,9 +5,16 @@ import (
 	"net/http"
 	"os"
 	"videoUploadAndProcessing/pkg/upload"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// 加載 .env 文件
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatalf("Error loading .env file: %v", err)
+	}
 
 	logfilepath := os.Getenv("VIDEO_PROCESSING_LOG_PATH")
 

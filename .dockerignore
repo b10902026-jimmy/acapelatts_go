@@ -2,6 +2,8 @@
 final_output/
 tmp/
 
+*_videos/
+
 # 忽略版本控制目錄
 .git/
 .gitignore
